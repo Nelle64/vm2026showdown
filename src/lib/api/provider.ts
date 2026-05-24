@@ -31,10 +31,13 @@ export interface FootballProvider {
 
 import { mockProvider } from "./mock-provider";
 import { apiFootballProvider } from "./api-football";
+import { footballDataProvider } from "./football-data";
 
 export function getProvider(): FootballProvider {
-  // Server: process.env.API_FOOTBALL_KEY. Annars mock.
-  const key = typeof process !== "undefined" ? process.env.API_FOOTBALL_KEY : undefined;
-  if (key) return apiFootballProvider(key);
+  // Föredra football-data.org (har VM 2026 gratis). Fallback: api-football, annars mock.
+  const fdKey = typeof process !== "undefined" ? process.env.FOOTBALL_DATA_API_KEY : undefined;
+  if (fdKey) return footballDataProvider(fdKey);
+  const afKey = typeof process !== "undefined" ? process.env.API_FOOTBALL_KEY : undefined;
+  if (afKey) return apiFootballProvider(afKey);
   return mockProvider;
 }
