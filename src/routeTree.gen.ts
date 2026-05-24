@@ -9,38 +9,199 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as AuthenticatedGamesRouteImport } from './routes/_authenticated.games'
+import { Route as AuthenticatedGamesGameIdRouteImport } from './routes/_authenticated.games.$gameId'
+import { Route as AuthenticatedGamesGameIdMyPicksRouteImport } from './routes/_authenticated.games.$gameId.my-picks'
+import { Route as AuthenticatedGamesGameIdMatchesRouteImport } from './routes/_authenticated.games.$gameId.matches'
+import { Route as AuthenticatedGamesGameIdLeaderboardRouteImport } from './routes/_authenticated.games.$gameId.leaderboard'
+import { Route as AuthenticatedGamesGameIdBonusRouteImport } from './routes/_authenticated.games.$gameId.bonus'
+import { Route as AuthenticatedGamesGameIdAdminRouteImport } from './routes/_authenticated.games.$gameId.admin'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGamesRoute = AuthenticatedGamesRouteImport.update({
+  id: '/games',
+  path: '/games',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGamesGameIdRoute =
+  AuthenticatedGamesGameIdRouteImport.update({
+    id: '/$gameId',
+    path: '/$gameId',
+    getParentRoute: () => AuthenticatedGamesRoute,
+  } as any)
+const AuthenticatedGamesGameIdMyPicksRoute =
+  AuthenticatedGamesGameIdMyPicksRouteImport.update({
+    id: '/my-picks',
+    path: '/my-picks',
+    getParentRoute: () => AuthenticatedGamesGameIdRoute,
+  } as any)
+const AuthenticatedGamesGameIdMatchesRoute =
+  AuthenticatedGamesGameIdMatchesRouteImport.update({
+    id: '/matches',
+    path: '/matches',
+    getParentRoute: () => AuthenticatedGamesGameIdRoute,
+  } as any)
+const AuthenticatedGamesGameIdLeaderboardRoute =
+  AuthenticatedGamesGameIdLeaderboardRouteImport.update({
+    id: '/leaderboard',
+    path: '/leaderboard',
+    getParentRoute: () => AuthenticatedGamesGameIdRoute,
+  } as any)
+const AuthenticatedGamesGameIdBonusRoute =
+  AuthenticatedGamesGameIdBonusRouteImport.update({
+    id: '/bonus',
+    path: '/bonus',
+    getParentRoute: () => AuthenticatedGamesGameIdRoute,
+  } as any)
+const AuthenticatedGamesGameIdAdminRoute =
+  AuthenticatedGamesGameIdAdminRouteImport.update({
+    id: '/admin',
+    path: '/admin',
+    getParentRoute: () => AuthenticatedGamesGameIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/games': typeof AuthenticatedGamesRouteWithChildren
+  '/profile': typeof AuthenticatedProfileRoute
+  '/games/$gameId': typeof AuthenticatedGamesGameIdRouteWithChildren
+  '/games/$gameId/admin': typeof AuthenticatedGamesGameIdAdminRoute
+  '/games/$gameId/bonus': typeof AuthenticatedGamesGameIdBonusRoute
+  '/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
+  '/games/$gameId/matches': typeof AuthenticatedGamesGameIdMatchesRoute
+  '/games/$gameId/my-picks': typeof AuthenticatedGamesGameIdMyPicksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/games': typeof AuthenticatedGamesRouteWithChildren
+  '/profile': typeof AuthenticatedProfileRoute
+  '/games/$gameId': typeof AuthenticatedGamesGameIdRouteWithChildren
+  '/games/$gameId/admin': typeof AuthenticatedGamesGameIdAdminRoute
+  '/games/$gameId/bonus': typeof AuthenticatedGamesGameIdBonusRoute
+  '/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
+  '/games/$gameId/matches': typeof AuthenticatedGamesGameIdMatchesRoute
+  '/games/$gameId/my-picks': typeof AuthenticatedGamesGameIdMyPicksRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/_authenticated/games': typeof AuthenticatedGamesRouteWithChildren
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/games/$gameId': typeof AuthenticatedGamesGameIdRouteWithChildren
+  '/_authenticated/games/$gameId/admin': typeof AuthenticatedGamesGameIdAdminRoute
+  '/_authenticated/games/$gameId/bonus': typeof AuthenticatedGamesGameIdBonusRoute
+  '/_authenticated/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
+  '/_authenticated/games/$gameId/matches': typeof AuthenticatedGamesGameIdMatchesRoute
+  '/_authenticated/games/$gameId/my-picks': typeof AuthenticatedGamesGameIdMyPicksRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/games'
+    | '/profile'
+    | '/games/$gameId'
+    | '/games/$gameId/admin'
+    | '/games/$gameId/bonus'
+    | '/games/$gameId/leaderboard'
+    | '/games/$gameId/matches'
+    | '/games/$gameId/my-picks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/games'
+    | '/profile'
+    | '/games/$gameId'
+    | '/games/$gameId/admin'
+    | '/games/$gameId/bonus'
+    | '/games/$gameId/leaderboard'
+    | '/games/$gameId/matches'
+    | '/games/$gameId/my-picks'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/signup'
+    | '/_authenticated/games'
+    | '/_authenticated/profile'
+    | '/_authenticated/games/$gameId'
+    | '/_authenticated/games/$gameId/admin'
+    | '/_authenticated/games/$gameId/bonus'
+    | '/_authenticated/games/$gameId/leaderboard'
+    | '/_authenticated/games/$gameId/matches'
+    | '/_authenticated/games/$gameId/my-picks'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +209,119 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/games': {
+      id: '/_authenticated/games'
+      path: '/games'
+      fullPath: '/games'
+      preLoaderRoute: typeof AuthenticatedGamesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/games/$gameId': {
+      id: '/_authenticated/games/$gameId'
+      path: '/$gameId'
+      fullPath: '/games/$gameId'
+      preLoaderRoute: typeof AuthenticatedGamesGameIdRouteImport
+      parentRoute: typeof AuthenticatedGamesRoute
+    }
+    '/_authenticated/games/$gameId/my-picks': {
+      id: '/_authenticated/games/$gameId/my-picks'
+      path: '/my-picks'
+      fullPath: '/games/$gameId/my-picks'
+      preLoaderRoute: typeof AuthenticatedGamesGameIdMyPicksRouteImport
+      parentRoute: typeof AuthenticatedGamesGameIdRoute
+    }
+    '/_authenticated/games/$gameId/matches': {
+      id: '/_authenticated/games/$gameId/matches'
+      path: '/matches'
+      fullPath: '/games/$gameId/matches'
+      preLoaderRoute: typeof AuthenticatedGamesGameIdMatchesRouteImport
+      parentRoute: typeof AuthenticatedGamesGameIdRoute
+    }
+    '/_authenticated/games/$gameId/leaderboard': {
+      id: '/_authenticated/games/$gameId/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/games/$gameId/leaderboard'
+      preLoaderRoute: typeof AuthenticatedGamesGameIdLeaderboardRouteImport
+      parentRoute: typeof AuthenticatedGamesGameIdRoute
+    }
+    '/_authenticated/games/$gameId/bonus': {
+      id: '/_authenticated/games/$gameId/bonus'
+      path: '/bonus'
+      fullPath: '/games/$gameId/bonus'
+      preLoaderRoute: typeof AuthenticatedGamesGameIdBonusRouteImport
+      parentRoute: typeof AuthenticatedGamesGameIdRoute
+    }
+    '/_authenticated/games/$gameId/admin': {
+      id: '/_authenticated/games/$gameId/admin'
+      path: '/admin'
+      fullPath: '/games/$gameId/admin'
+      preLoaderRoute: typeof AuthenticatedGamesGameIdAdminRouteImport
+      parentRoute: typeof AuthenticatedGamesGameIdRoute
+    }
   }
 }
 
+interface AuthenticatedGamesGameIdRouteChildren {
+  AuthenticatedGamesGameIdAdminRoute: typeof AuthenticatedGamesGameIdAdminRoute
+  AuthenticatedGamesGameIdBonusRoute: typeof AuthenticatedGamesGameIdBonusRoute
+  AuthenticatedGamesGameIdLeaderboardRoute: typeof AuthenticatedGamesGameIdLeaderboardRoute
+  AuthenticatedGamesGameIdMatchesRoute: typeof AuthenticatedGamesGameIdMatchesRoute
+  AuthenticatedGamesGameIdMyPicksRoute: typeof AuthenticatedGamesGameIdMyPicksRoute
+}
+
+const AuthenticatedGamesGameIdRouteChildren: AuthenticatedGamesGameIdRouteChildren =
+  {
+    AuthenticatedGamesGameIdAdminRoute: AuthenticatedGamesGameIdAdminRoute,
+    AuthenticatedGamesGameIdBonusRoute: AuthenticatedGamesGameIdBonusRoute,
+    AuthenticatedGamesGameIdLeaderboardRoute:
+      AuthenticatedGamesGameIdLeaderboardRoute,
+    AuthenticatedGamesGameIdMatchesRoute: AuthenticatedGamesGameIdMatchesRoute,
+    AuthenticatedGamesGameIdMyPicksRoute: AuthenticatedGamesGameIdMyPicksRoute,
+  }
+
+const AuthenticatedGamesGameIdRouteWithChildren =
+  AuthenticatedGamesGameIdRoute._addFileChildren(
+    AuthenticatedGamesGameIdRouteChildren,
+  )
+
+interface AuthenticatedGamesRouteChildren {
+  AuthenticatedGamesGameIdRoute: typeof AuthenticatedGamesGameIdRouteWithChildren
+}
+
+const AuthenticatedGamesRouteChildren: AuthenticatedGamesRouteChildren = {
+  AuthenticatedGamesGameIdRoute: AuthenticatedGamesGameIdRouteWithChildren,
+}
+
+const AuthenticatedGamesRouteWithChildren =
+  AuthenticatedGamesRoute._addFileChildren(AuthenticatedGamesRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedGamesRoute: typeof AuthenticatedGamesRouteWithChildren
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedGamesRoute: AuthenticatedGamesRouteWithChildren,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
