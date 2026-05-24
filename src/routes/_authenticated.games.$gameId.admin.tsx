@@ -149,6 +149,9 @@ function AdminPage() {
         <p className="mt-2 text-xs text-muted-foreground">Hämtar lag och matcher från API-Football. Sker även automatiskt i bakgrunden.</p>
       </section>
 
+      <ResultsSection />
+
+
       <section>
         <h2 className="mb-3 font-semibold">Medlemmar</h2>
         <div className="space-y-2">
@@ -254,6 +257,72 @@ function SettleRow({ q, onSettle }: { q: any; onSettle: (ans: string) => void })
           <Button size="sm" onClick={() => onSettle(ans)} className="bg-gold text-gold-foreground hover:bg-gold/90">Rätta</Button>
         </div>
       )}
+    </div>
+  );
+}
+
+function ResultsSection() {
+  const qc = useQueryClient();
+  const { data: matches } = useQuery({
+    queryKey: ["admin-matches-results"],
+    queryFn: async () => {
+      const { data } = await supabase.from("matches")
+        .select("id, kickoff_at, status, home_score, away_score, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)")
+        .order("kickoff_at");
+      return data ?? [];
+    },
+  });
+
+  const save = useMutation({
+    mutationFn: async ({ id, h, a }: { id: string; h: number; a: number }) => {
+      const { error } = await supabase.from("matches")
+        .update({ home_score: h, away_score: a, status: "finished" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Resultat sparat – poäng räknas");
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (!matches?.length) return null;
+
+  return (
+    <section>
+      <h2 className="mb-3 font-semibold">Mata in resultat</h2>
+      <div className="space-y-2">
+        {matches.map((m: any) => (
+          <ResultRow key={m.id} m={m} onSave={(h, a) => save.mutate({ id: m.id, h, a })} pending={save.isPending} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ResultRow({ m, onSave, pending }: { m: any; onSave: (h: number, a: number) => void; pending: boolean }) {
+  const [h, setH] = useState<string>(m.home_score != null ? String(m.home_score) : "");
+  const [a, setA] = useState<string>(m.away_score != null ? String(m.away_score) : "");
+  const finished = m.status === "finished";
+  return (
+    <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium">
+          {m.home?.flag_emoji} {m.home?.code} – {m.away?.code} {m.away?.flag_emoji}
+        </div>
+        <div className="text-[11px] text-muted-foreground">
+          {new Date(m.kickoff_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          {finished && <span className="ml-1 text-success">· färdig</span>}
+        </div>
+      </div>
+      <input type="number" min={0} value={h} onChange={(e) => setH(e.target.value)} className="h-9 w-12 rounded-md border bg-background text-center font-semibold tabular-nums" />
+      <span className="text-muted-foreground">–</span>
+      <input type="number" min={0} value={a} onChange={(e) => setA(e.target.value)} className="h-9 w-12 rounded-md border bg-background text-center font-semibold tabular-nums" />
+      <Button size="sm" disabled={pending || h === "" || a === ""} onClick={() => onSave(parseInt(h, 10), parseInt(a, 10))}
+        className="bg-gold text-gold-foreground hover:bg-gold/90">
+        {finished ? "Uppdatera" : "Spara"}
+      </Button>
     </div>
   );
 }

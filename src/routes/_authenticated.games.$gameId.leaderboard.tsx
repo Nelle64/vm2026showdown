@@ -41,10 +41,11 @@ function LeaderboardPage() {
       const { data: bonus } = await supabase.from("bonus_answers")
         .select("user_id, points, question:bonus_questions!inner(game_id)").eq("question.game_id", gameId).in("user_id", userIds);
 
-      type Row = { user_id: string; name: string; total: number; bonus: number; exact: number; outcome: number; wrong: number; picks: number };
+      type Row = { user_id: string; name: string; avatar: string | null; total: number; bonus: number; exact: number; outcome: number; wrong: number; picks: number; accuracy: number };
       const rows: Row[] = members.map((m: any) => {
         const myPreds = (preds ?? []).filter((p: any) => p.user_id === m.user_id);
         const myBonus = (bonus ?? []).filter((b: any) => b.user_id === m.user_id);
+        const scored = myPreds.filter((p: any) => p.points !== null);
         const exact = myPreds.filter((p: any) => p.points === 3).length;
         const outcome = myPreds.filter((p: any) => p.points === 1).length;
         const wrong = myPreds.filter((p: any) => p.points === 0).length;
@@ -53,9 +54,11 @@ function LeaderboardPage() {
         return {
           user_id: m.user_id,
           name: m.profile?.display_name ?? "Okänd",
+          avatar: m.profile?.avatar_url ?? null,
           total: mainPts + bonusPts,
           bonus: bonusPts,
           exact, outcome, wrong, picks: myPreds.length,
+          accuracy: scored.length ? Math.round(((exact + outcome) / scored.length) * 100) : 0,
         };
       });
       rows.sort((a, b) => b.total - a.total || b.exact - a.exact);
@@ -77,10 +80,19 @@ function LeaderboardPage() {
              i === 1 ? <Medal className="h-5 w-5 text-muted-foreground" /> :
              i === 2 ? <Medal className="h-5 w-5 text-amber-700" /> : <span className="text-muted-foreground">{i + 1}</span>}
           </div>
+          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+            {r.avatar ? (
+              <img src={r.avatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
+                {r.name.slice(0, 2).toUpperCase()}
+              </div>
+            )}
+          </div>
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{r.name}{r.user_id === user!.id ? " (du)" : ""}</div>
             <div className="text-xs text-muted-foreground">
-              {r.exact} exakt · {r.outcome} utfall · {r.wrong} fel · {r.picks} tips · {r.bonus} bonus
+              {r.exact} exakt · {r.outcome} utfall · {r.wrong} fel · {r.accuracy}% träff
             </div>
           </div>
           <div className="text-right">
