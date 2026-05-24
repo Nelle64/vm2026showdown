@@ -13,6 +13,12 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const postLogin = () => {
+    const pending = typeof window !== "undefined" ? localStorage.getItem("pending_invite") : null;
+    if (pending) { navigate({ to: `/join/${pending}` }); return; }
+    navigate({ to: "/games" });
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -20,14 +26,16 @@ function LoginPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Välkommen tillbaka!");
-    navigate({ to: "/games" });
+    postLogin();
   };
 
   const onGoogle = async () => {
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/games" });
+    const pending = typeof window !== "undefined" ? localStorage.getItem("pending_invite") : null;
+    const target = pending ? `/join/${pending}` : "/games";
+    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + target });
     if (r.error) return toast.error(r.error.message);
     if (r.redirected) return;
-    navigate({ to: "/games" });
+    postLogin();
   };
 
   return (
