@@ -101,7 +101,10 @@ export function MatchCard({ match, gameId, userId, prediction }: Props) {
           <LockedView prediction={prediction ?? null} finished={finished} points={points ?? null} match={match} />
         ) : (
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Ditt tips</div>
+            <div className="flex flex-col">
+              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Ditt tips</div>
+              {countdown && <div className="mt-0.5 text-[10px] font-medium text-gold">{countdown}</div>}
+            </div>
             <div className="flex items-center gap-2">
               <ScoreInput value={home} onChange={setHome} />
               <span className="text-muted-foreground">–</span>
