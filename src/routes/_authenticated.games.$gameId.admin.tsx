@@ -149,6 +149,9 @@ function AdminPage() {
         <p className="mt-2 text-xs text-muted-foreground">Hämtar lag och matcher från API-Football. Sker även automatiskt i bakgrunden.</p>
       </section>
 
+      <ResultsSection />
+
+
       <section>
         <h2 className="mb-3 font-semibold">Medlemmar</h2>
         <div className="space-y-2">
