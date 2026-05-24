@@ -80,10 +80,19 @@ function LeaderboardPage() {
              i === 1 ? <Medal className="h-5 w-5 text-muted-foreground" /> :
              i === 2 ? <Medal className="h-5 w-5 text-amber-700" /> : <span className="text-muted-foreground">{i + 1}</span>}
           </div>
+          <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+            {r.avatar ? (
+              <img src={r.avatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
+                {r.name.slice(0, 2).toUpperCase()}
+              </div>
+            )}
+          </div>
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{r.name}{r.user_id === user!.id ? " (du)" : ""}</div>
             <div className="text-xs text-muted-foreground">
-              {r.exact} exakt · {r.outcome} utfall · {r.wrong} fel · {r.picks} tips · {r.bonus} bonus
+              {r.exact} exakt · {r.outcome} utfall · {r.wrong} fel · {r.accuracy}% träff
             </div>
           </div>
           <div className="text-right">
