@@ -35,10 +35,12 @@ function GameLayout() {
 
   const isAdmin = membership?.is_admin || game?.owner_id === user!.id;
 
-  // Redirect /games/:id → /games/:id/matches
-  if (loc.pathname === `/games/${gameId}` || loc.pathname === `/games/${gameId}/`) {
-    navigate({ to: `/games/${gameId}/matches`, replace: true });
-  }
+  // Redirect /games/:id → /games/:id/matches (i effect, inte under render)
+  useEffect(() => {
+    if (loc.pathname === `/games/${gameId}` || loc.pathname === `/games/${gameId}/`) {
+      navigate({ to: `/games/${gameId}/matches`, replace: true });
+    }
+  }, [loc.pathname, gameId, navigate]);
 
   const tabs = [
     { to: `/games/${gameId}/matches`, label: "Matcher" },
