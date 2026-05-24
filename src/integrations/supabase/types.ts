@@ -420,7 +420,13 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       bonus_status: "open" | "locked" | "settled"
-      bonus_type: "number" | "text" | "multi_choice" | "team" | "player"
+      bonus_type:
+        | "number"
+        | "text"
+        | "multi_choice"
+        | "team"
+        | "player"
+        | "multiple_choice"
       match_status:
         | "scheduled"
         | "locked"
@@ -557,7 +563,14 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       bonus_status: ["open", "locked", "settled"],
-      bonus_type: ["number", "text", "multi_choice", "team", "player"],
+      bonus_type: [
+        "number",
+        "text",
+        "multi_choice",
+        "team",
+        "player",
+        "multiple_choice",
+      ],
       match_status: [
         "scheduled",
         "locked",

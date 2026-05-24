@@ -13,8 +13,10 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as AuthenticatedGamesRouteImport } from './routes/_authenticated.games'
+import { Route as ApiPublicSyncRouteImport } from './routes/api/public/sync'
 import { Route as AuthenticatedGamesGameIdRouteImport } from './routes/_authenticated.games.$gameId'
 import { Route as AuthenticatedGamesGameIdMyPicksRouteImport } from './routes/_authenticated.games.$gameId.my-picks'
 import { Route as AuthenticatedGamesGameIdMatchesRouteImport } from './routes/_authenticated.games.$gameId.matches'
@@ -41,6 +43,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinCodeRoute = JoinCodeRouteImport.update({
+  id: '/join/$code',
+  path: '/join/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -50,6 +57,11 @@ const AuthenticatedGamesRoute = AuthenticatedGamesRouteImport.update({
   id: '/games',
   path: '/games',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiPublicSyncRoute = ApiPublicSyncRouteImport.update({
+  id: '/api/public/sync',
+  path: '/api/public/sync',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedGamesGameIdRoute =
   AuthenticatedGamesGameIdRouteImport.update({
@@ -94,7 +106,9 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/games': typeof AuthenticatedGamesRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
+  '/join/$code': typeof JoinCodeRoute
   '/games/$gameId': typeof AuthenticatedGamesGameIdRouteWithChildren
+  '/api/public/sync': typeof ApiPublicSyncRoute
   '/games/$gameId/admin': typeof AuthenticatedGamesGameIdAdminRoute
   '/games/$gameId/bonus': typeof AuthenticatedGamesGameIdBonusRoute
   '/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
@@ -107,7 +121,9 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/games': typeof AuthenticatedGamesRouteWithChildren
   '/profile': typeof AuthenticatedProfileRoute
+  '/join/$code': typeof JoinCodeRoute
   '/games/$gameId': typeof AuthenticatedGamesGameIdRouteWithChildren
+  '/api/public/sync': typeof ApiPublicSyncRoute
   '/games/$gameId/admin': typeof AuthenticatedGamesGameIdAdminRoute
   '/games/$gameId/bonus': typeof AuthenticatedGamesGameIdBonusRoute
   '/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
@@ -122,7 +138,9 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/games': typeof AuthenticatedGamesRouteWithChildren
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/join/$code': typeof JoinCodeRoute
   '/_authenticated/games/$gameId': typeof AuthenticatedGamesGameIdRouteWithChildren
+  '/api/public/sync': typeof ApiPublicSyncRoute
   '/_authenticated/games/$gameId/admin': typeof AuthenticatedGamesGameIdAdminRoute
   '/_authenticated/games/$gameId/bonus': typeof AuthenticatedGamesGameIdBonusRoute
   '/_authenticated/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
@@ -137,7 +155,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/games'
     | '/profile'
+    | '/join/$code'
     | '/games/$gameId'
+    | '/api/public/sync'
     | '/games/$gameId/admin'
     | '/games/$gameId/bonus'
     | '/games/$gameId/leaderboard'
@@ -150,7 +170,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/games'
     | '/profile'
+    | '/join/$code'
     | '/games/$gameId'
+    | '/api/public/sync'
     | '/games/$gameId/admin'
     | '/games/$gameId/bonus'
     | '/games/$gameId/leaderboard'
@@ -164,7 +186,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/games'
     | '/_authenticated/profile'
+    | '/join/$code'
     | '/_authenticated/games/$gameId'
+    | '/api/public/sync'
     | '/_authenticated/games/$gameId/admin'
     | '/_authenticated/games/$gameId/bonus'
     | '/_authenticated/games/$gameId/leaderboard'
@@ -177,6 +201,8 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  JoinCodeRoute: typeof JoinCodeRoute
+  ApiPublicSyncRoute: typeof ApiPublicSyncRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -209,6 +235,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join/$code': {
+      id: '/join/$code'
+      path: '/join/$code'
+      fullPath: '/join/$code'
+      preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -222,6 +255,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/games'
       preLoaderRoute: typeof AuthenticatedGamesRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/sync': {
+      id: '/api/public/sync'
+      path: '/api/public/sync'
+      fullPath: '/api/public/sync'
+      preLoaderRoute: typeof ApiPublicSyncRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/games/$gameId': {
       id: '/_authenticated/games/$gameId'
@@ -321,6 +361,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  JoinCodeRoute: JoinCodeRoute,
+  ApiPublicSyncRoute: ApiPublicSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
