@@ -1,5 +1,6 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Trophy, Medal } from "lucide-react";
@@ -10,6 +11,19 @@ export const Route = createFileRoute("/_authenticated/games/$gameId/leaderboard"
 function LeaderboardPage() {
   const { gameId } = useParams({ from: "/_authenticated/games/$gameId/leaderboard" });
   const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase.channel(`lb-${gameId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "predictions", filter: `game_id=eq.${gameId}` },
+        () => qc.invalidateQueries({ queryKey: ["leaderboard", gameId] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "bonus_answers" },
+        () => qc.invalidateQueries({ queryKey: ["leaderboard", gameId] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches" },
+        () => qc.invalidateQueries({ queryKey: ["leaderboard", gameId] }))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [gameId, qc]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["leaderboard", gameId],

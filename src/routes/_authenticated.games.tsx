@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Plus, Users, KeyRound, ChevronRight } from "lucide-react";
+import { Plus, Users, KeyRound, ChevronRight, Share2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/games")({ component: GamesPage });
 
@@ -127,14 +127,26 @@ function GamesPage() {
       ) : (
         <div className="space-y-2">
           {games.map((m: any) => m.game && (
-            <Link key={m.game.id} to={`/games/${m.game.id}/matches`} className="flex items-center justify-between rounded-xl border bg-card p-4 transition hover:border-gold/40">
-              <div>
+            <div key={m.game.id} className="group flex items-center justify-between rounded-xl border bg-card p-4 transition hover:border-gold/40">
+              <Link to={`/games/${m.game.id}/matches`} className="min-w-0 flex-1">
                 <div className="font-semibold">{m.game.name}</div>
                 {m.game.description && <div className="text-sm text-muted-foreground">{m.game.description}</div>}
                 <div className="mt-1 text-xs text-muted-foreground">Kod: <span className="font-mono text-gold">{m.game.invite_code}</span></div>
-              </div>
+              </Link>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  const url = `${window.location.origin}/join/${m.game.invite_code}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success("Invite-länk kopierad");
+                }}
+                className="mr-1 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-gold"
+                title="Kopiera invite-länk"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </Link>
+            </div>
           ))}
         </div>
       )}
