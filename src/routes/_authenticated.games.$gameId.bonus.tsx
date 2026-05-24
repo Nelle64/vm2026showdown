@@ -58,9 +58,10 @@ function BonusPage() {
 
 function BonusQuestionCard({ q, answer, onAnswered }: { q: any; answer: any; onAnswered: () => void }) {
   const { user } = useAuth();
-  const [value, setValue] = useState<string>(answer?.answer ? JSON.parse(JSON.stringify(answer.answer)).value ?? "" : "");
+  const [value, setValue] = useState<string>(answer?.answer?.value ?? "");
   const locked = q.status !== "open" || new Date(q.lock_at).getTime() <= Date.now();
   const settled = q.status === "settled";
+  const isMC = q.answer_type === "multiple_choice" && Array.isArray(q.options);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -87,7 +88,7 @@ function BonusQuestionCard({ q, answer, onAnswered }: { q: any; answer: any; onA
       {settled && q.correct_answer && (
         <div className="mt-3 rounded-md bg-muted/50 p-2 text-sm">
           <span className="text-muted-foreground">Rätt svar: </span>
-          <span className="font-semibold">{JSON.stringify(q.correct_answer).replace(/[{}"]/g, "").replace("value:", "")}</span>
+          <span className="font-semibold">{q.correct_answer.value ?? JSON.stringify(q.correct_answer)}</span>
         </div>
       )}
 
@@ -100,9 +101,24 @@ function BonusQuestionCard({ q, answer, onAnswered }: { q: any; answer: any; onA
               <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-xs font-bold text-gold">+{answer.points} p</span>
             )}
           </div>
+        ) : isMC ? (
+          <div className="space-y-2">
+            <div className="grid gap-2">
+              {q.options.map((o: string) => (
+                <button key={o} onClick={() => setValue(o)}
+                  className={"rounded-md border px-3 py-2 text-left text-sm transition " + (value === o ? "border-gold bg-gold/10 font-semibold" : "hover:border-gold/40")}>
+                  {o}
+                </button>
+              ))}
+            </div>
+            <Button onClick={() => save.mutate()} disabled={save.isPending || !value} className="bg-gold text-gold-foreground hover:bg-gold/90">
+              Spara
+            </Button>
+          </div>
         ) : (
           <div className="flex gap-2">
             <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Ditt svar"
+              type={q.answer_type === "number" ? "number" : "text"}
               className="h-10 flex-1 rounded-md border bg-background px-3" />
             <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
               Spara
