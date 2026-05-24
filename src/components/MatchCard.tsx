@@ -39,12 +39,18 @@ export function MatchCard({ match, gameId, userId, prediction }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  const locked = useMemo(() => {
-    const diff = new Date(match.kickoff_at).getTime() - now;
-    return diff <= 60_000 || match.status !== "scheduled";
-  }, [match.kickoff_at, match.status, now]);
-
+  const msToLock = useMemo(() => new Date(match.kickoff_at).getTime() - 60_000 - now, [match.kickoff_at, now]);
+  const locked = msToLock <= 0 || match.status !== "scheduled";
   const finished = match.status === "finished";
+
+  const countdown = useMemo(() => {
+    if (locked || msToLock > 6 * 3600_000) return null;
+    const s = Math.floor(msToLock / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return h > 0 ? `Låser om ${h}h ${m}m` : m > 0 ? `Låser om ${m}m ${sec}s` : `Låser om ${sec}s`;
+  }, [locked, msToLock]);
 
   const save = useMutation({
     mutationFn: async () => {
