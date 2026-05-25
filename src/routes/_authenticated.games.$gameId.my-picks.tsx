@@ -43,7 +43,8 @@ function MyPicksPage() {
         <div className="space-y-3">
           {data.map((p: any) => p.match && (
             <MatchCard key={p.match_id} match={p.match as MatchRow} gameId={gameId} userId={user!.id}
-              prediction={{ home_score: p.home_score, away_score: p.away_score, points: p.points }} />
+              prediction={{ home_score: p.home_score, away_score: p.away_score, points: p.points }}
+              lockAt={getLockAt(p.match_id)} />
           ))}
         </div>
       )}
