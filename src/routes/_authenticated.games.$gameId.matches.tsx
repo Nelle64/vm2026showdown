@@ -53,7 +53,7 @@ function MatchesPage() {
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{day}</h2>
           <div className="space-y-3">
             {list.map((m) => (
-              <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} />
+              <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} lockAt={getLockAt(m.id)} />
             ))}
           </div>
         </section>
