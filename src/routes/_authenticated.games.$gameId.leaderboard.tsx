@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Trophy, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PredictionsMatrix } from "@/components/PredictionsMatrix";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/leaderboard")({ component: LeaderboardPage });
 
@@ -69,7 +70,11 @@ function LeaderboardPage() {
   if (isLoading) return <div className="text-muted-foreground">Laddar tabell...</div>;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Poängställning</h2>
+        <div className="space-y-2">
+
       {data?.map((r, i) => (
         <div key={r.user_id} className={cn(
           "flex items-center gap-3 rounded-xl border bg-card p-3",
@@ -101,9 +106,17 @@ function LeaderboardPage() {
           </div>
         </div>
       ))}
-      {!data?.length && (
-        <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Inga medlemmar ännu.</div>
-      )}
+          {!data?.length && (
+            <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Inga medlemmar ännu.</div>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Allas gissningar</h2>
+        <PredictionsMatrix gameId={gameId} />
+      </section>
     </div>
   );
 }
+
