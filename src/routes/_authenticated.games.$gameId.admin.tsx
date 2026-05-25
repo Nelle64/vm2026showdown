@@ -179,6 +179,8 @@ function AdminPage() {
         <p className="mt-2 text-xs text-muted-foreground">Hämtar lag och matcher från API-Football. Sker även automatiskt i bakgrunden.</p>
       </section>
 
+      <LockSettingsSection gameId={gameId} />
+
       <ResultsSection />
 
       <section>
