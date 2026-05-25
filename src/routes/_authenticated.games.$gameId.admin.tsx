@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Trash2, UserCheck, RefreshCw, Copy, Plus, X, Check, XCircle } from "lucide-react";
+import { LockSettingsSection } from "@/components/admin/LockSettingsSection";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/admin")({ component: AdminPage });
 
