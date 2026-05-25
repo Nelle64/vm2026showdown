@@ -135,15 +135,35 @@ function GamesPage() {
 
       {mode === "join" && (
         <div className="mb-4 rounded-xl border bg-card p-4">
-          <h3 className="mb-3 font-semibold">Gå med via kod</h3>
+          <h3 className="mb-1 font-semibold">Ansök via kod</h3>
+          <p className="mb-3 text-xs text-muted-foreground">Admin för spelet godkänner din ansökan.</p>
           <div className="flex gap-2">
             <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCD1234" maxLength={16}
               className="h-11 flex-1 rounded-md border bg-background px-3 font-mono uppercase tracking-wider" />
             <Button onClick={() => joinGame.mutate()} disabled={joinGame.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
-              Gå med
+              Ansök
             </Button>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setMode("none")} className="mt-2">Avbryt</Button>
+        </div>
+      )}
+
+      {myRequests && myRequests.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mina ansökningar</div>
+          {myRequests.map((r: any) => (
+            <div key={r.id} className="flex items-center justify-between rounded-lg border bg-card p-3 text-sm">
+              <div>
+                <div className="font-mono text-xs text-muted-foreground">Spel-ID: {r.game_id.slice(0, 8)}...</div>
+                <div className={r.status === "pending" ? "text-gold" : "text-destructive"}>
+                  {r.status === "pending" ? "Väntar på godkännande" : "Avvisad"}
+                </div>
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => cancelRequest.mutate(r.id)}>
+                Avbryt
+              </Button>
+            </div>
+          ))}
         </div>
       )}
 
