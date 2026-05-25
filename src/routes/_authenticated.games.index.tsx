@@ -52,18 +52,48 @@ function GamesPage() {
     mutationFn: async () => {
       const trimmed = code.trim().toUpperCase();
       if (!trimmed) throw new Error("Ange en kod");
-      const { data: g, error: e1 } = await supabase.from("games").select("id").eq("invite_code", trimmed).maybeSingle();
-      if (e1 || !g) throw new Error("Hittade inget spel med den koden");
-      const { error: e2 } = await supabase.from("game_members").insert({ game_id: g.id, user_id: user!.id });
-      if (e2 && !e2.message.includes("duplicate")) throw e2;
-      return g.id;
+      const { data, error } = await supabase.rpc("request_join_by_code", { _code: trimmed });
+      if (error) {
+        if (error.message.includes("invalid code")) throw new Error("Hittade inget spel med den koden");
+        throw error;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      return row as { game_id: string; game_name: string; status: "pending" | "approved" | "rejected"; already_member: boolean };
     },
-    onSuccess: (id) => {
-      toast.success("Du är med!");
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["my-games"] });
+      qc.invalidateQueries({ queryKey: ["my-requests"] });
       setMode("none"); setCode("");
-      navigate({ to: `/games/${id}/matches` });
+      if (r.already_member || r.status === "approved") {
+        toast.success("Du är med!");
+        navigate({ to: `/games/${r.game_id}/matches` });
+      } else if (r.status === "pending") {
+        toast.success(`Ansökan skickad till ${r.game_name}. Väntar på godkännande.`);
+      } else {
+        toast.error("Din ansökan blev avvisad tidigare. Kontakta admin.");
+      }
     },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const { data: myRequests } = useQuery({
+    queryKey: ["my-requests", user!.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("game_join_requests")
+        .select("id, status, created_at, game_id")
+        .eq("user_id", user!.id)
+        .in("status", ["pending", "rejected"]);
+      return data ?? [];
+    },
+  });
+
+  const cancelRequest = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("game_join_requests").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Ansökan tillbakadragen"); qc.invalidateQueries({ queryKey: ["my-requests"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
