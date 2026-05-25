@@ -106,9 +106,17 @@ function LeaderboardPage() {
           </div>
         </div>
       ))}
-      {!data?.length && (
-        <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Inga medlemmar ännu.</div>
-      )}
+          {!data?.length && (
+            <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Inga medlemmar ännu.</div>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Allas gissningar</h2>
+        <PredictionsMatrix gameId={gameId} />
+      </section>
     </div>
   );
 }
+
