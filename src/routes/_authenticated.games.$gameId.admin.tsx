@@ -32,6 +32,35 @@ function AdminPage() {
     },
   });
 
+  const { data: requests } = useQuery({
+    queryKey: ["join-requests", gameId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("game_join_requests")
+        .select("id, user_id, status, created_at, profile:profiles(display_name, avatar_url)")
+        .eq("game_id", gameId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const decideRequest = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      const { error } = await supabase
+        .from("game_join_requests")
+        .update({ status: approve ? "approved" : "rejected" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      toast.success(vars.approve ? "Godkänd" : "Avvisad");
+      qc.invalidateQueries({ queryKey: ["join-requests"] });
+      qc.invalidateQueries({ queryKey: ["admin-members"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const { data: questions } = useQuery({
     queryKey: ["admin-bonus", gameId],
     queryFn: async () => {
