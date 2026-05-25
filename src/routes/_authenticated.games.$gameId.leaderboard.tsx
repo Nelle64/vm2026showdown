@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Trophy, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PredictionsMatrix } from "@/components/PredictionsMatrix";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/leaderboard")({ component: LeaderboardPage });
 
