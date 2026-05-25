@@ -10,6 +10,7 @@ export const Route = createFileRoute("/_authenticated/games/$gameId/matches")({ 
 function MatchesPage() {
   const { gameId } = useParams({ from: "/_authenticated/games/$gameId/matches" });
   const { user } = useAuth();
+  const { getLockAt } = useGameLock(gameId);
 
   const { data: matches, isLoading } = useQuery({
     queryKey: ["matches"],
