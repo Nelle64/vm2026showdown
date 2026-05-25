@@ -210,6 +210,7 @@ export type Database = {
           description: string | null
           id: string
           invite_code: string
+          lock_mode: Database["public"]["Enums"]["game_lock_mode"]
           name: string
           owner_id: string
         }
@@ -218,6 +219,7 @@ export type Database = {
           description?: string | null
           id?: string
           invite_code?: string
+          lock_mode?: Database["public"]["Enums"]["game_lock_mode"]
           name: string
           owner_id: string
         }
@@ -226,6 +228,7 @@ export type Database = {
           description?: string | null
           id?: string
           invite_code?: string
+          lock_mode?: Database["public"]["Enums"]["game_lock_mode"]
           name?: string
           owner_id?: string
         }
@@ -372,6 +375,84 @@ export type Database = {
         }
         Relationships: []
       }
+      round_matches: {
+        Row: {
+          created_at: string
+          game_id: string
+          match_id: string
+          round_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          match_id: string
+          round_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          match_id?: string
+          round_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_matches_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_matches_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_matches_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rounds: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          lock_at: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          lock_at?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          lock_at?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rounds_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           code: string
@@ -449,6 +530,10 @@ export type Database = {
         Returns: boolean
       }
       is_match_locked: { Args: { _match_id: string }; Returns: boolean }
+      is_match_locked_for_game: {
+        Args: { _game_id: string; _match_id: string }
+        Returns: boolean
+      }
       request_join_by_code: {
         Args: { _code: string }
         Returns: {
@@ -469,6 +554,7 @@ export type Database = {
         | "team"
         | "player"
         | "multiple_choice"
+      game_lock_mode: "per_match" | "per_round"
       join_request_status: "pending" | "approved" | "rejected"
       match_status:
         | "scheduled"
@@ -614,6 +700,7 @@ export const Constants = {
         "player",
         "multiple_choice",
       ],
+      game_lock_mode: ["per_match", "per_round"],
       join_request_status: ["pending", "approved", "rejected"],
       match_status: [
         "scheduled",
