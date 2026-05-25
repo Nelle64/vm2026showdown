@@ -25,9 +25,11 @@ interface Props {
   gameId: string;
   userId: string;
   prediction?: { home_score: number; away_score: number; points: number | null } | null;
+  /** Effektiv låstid (ISO). Om angiven används denna istället för kickoff_at - 1 min. */
+  lockAt?: string | null;
 }
 
-export function MatchCard({ match, gameId, userId, prediction }: Props) {
+export function MatchCard({ match, gameId, userId, prediction, lockAt }: Props) {
   const qc = useQueryClient();
   const [home, setHome] = useState<string>(prediction ? String(prediction.home_score) : "");
   const [away, setAway] = useState<string>(prediction ? String(prediction.away_score) : "");
@@ -39,7 +41,11 @@ export function MatchCard({ match, gameId, userId, prediction }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  const msToLock = useMemo(() => new Date(match.kickoff_at).getTime() - 60_000 - now, [match.kickoff_at, now]);
+  const lockTime = useMemo(() => {
+    if (lockAt) return new Date(lockAt).getTime();
+    return new Date(match.kickoff_at).getTime() - 60_000;
+  }, [lockAt, match.kickoff_at]);
+  const msToLock = lockTime - now;
   const locked = msToLock <= 0 || match.status !== "scheduled";
   const finished = match.status === "finished";
 
