@@ -26,12 +26,21 @@ function AdminPage() {
   const { data: members } = useQuery({
     queryKey: ["admin-members", gameId],
     queryFn: async () => {
-      const { data } = await supabase.from("game_members")
-        .select("id, user_id, is_admin, profile:profiles(display_name)")
+      const { data: rows, error } = await supabase.from("game_members")
+        .select("id, user_id, is_admin")
         .eq("game_id", gameId);
-      return data ?? [];
+      if (error) throw error;
+      const list = rows ?? [];
+      if (list.length === 0) return [];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", list.map((m) => m.user_id));
+      const map = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+      return list.map((m) => ({ ...m, profile: map.get(m.user_id) ?? null }));
     },
   });
+
 
   const { data: requests } = useQuery({
     queryKey: ["join-requests", gameId],
