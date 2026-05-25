@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
+import { useGameLock } from "@/lib/use-game-lock";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/my-picks")({ component: MyPicksPage });
 
