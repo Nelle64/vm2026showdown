@@ -449,6 +449,15 @@ export type Database = {
         Returns: boolean
       }
       is_match_locked: { Args: { _match_id: string }; Returns: boolean }
+      request_join_by_code: {
+        Args: { _code: string }
+        Returns: {
+          already_member: boolean
+          game_id: string
+          game_name: string
+          status: Database["public"]["Enums"]["join_request_status"]
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
