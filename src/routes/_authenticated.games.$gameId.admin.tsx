@@ -36,13 +36,22 @@ function AdminPage() {
   const { data: requests } = useQuery({
     queryKey: ["join-requests", gameId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: reqs, error } = await supabase
         .from("game_join_requests")
-        .select("id, user_id, status, created_at, profile:profiles(display_name, avatar_url)")
+        .select("id, user_id, status, created_at")
         .eq("game_id", gameId)
         .eq("status", "pending")
         .order("created_at", { ascending: true });
-      return data ?? [];
+      if (error) throw error;
+      const list = reqs ?? [];
+      if (list.length === 0) return [];
+      const ids = list.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", ids);
+      const map = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+      return list.map((r) => ({ ...r, profile: map.get(r.user_id) ?? null }));
     },
   });
 
