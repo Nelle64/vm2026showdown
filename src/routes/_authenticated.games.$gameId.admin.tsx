@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash2, UserCheck, RefreshCw, Copy, Plus, X } from "lucide-react";
+import { Trash2, UserCheck, RefreshCw, Copy, Plus, X, Check, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/admin")({ component: AdminPage });
 
