@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash2, UserCheck, RefreshCw, Copy, Plus, X } from "lucide-react";
+import { Trash2, UserCheck, RefreshCw, Copy, Plus, X, Check, XCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/admin")({ component: AdminPage });
 
@@ -30,6 +30,35 @@ function AdminPage() {
         .eq("game_id", gameId);
       return data ?? [];
     },
+  });
+
+  const { data: requests } = useQuery({
+    queryKey: ["join-requests", gameId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("game_join_requests")
+        .select("id, user_id, status, created_at, profile:profiles(display_name, avatar_url)")
+        .eq("game_id", gameId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const decideRequest = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      const { error } = await supabase
+        .from("game_join_requests")
+        .update({ status: approve ? "approved" : "rejected" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      toast.success(vars.approve ? "Godkänd" : "Avvisad");
+      qc.invalidateQueries({ queryKey: ["join-requests"] });
+      qc.invalidateQueries({ queryKey: ["admin-members"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const { data: questions } = useQuery({
@@ -151,6 +180,46 @@ function AdminPage() {
 
       <ResultsSection />
 
+      <section>
+        <h2 className="mb-3 font-semibold">
+          Ansökningar {requests && requests.length > 0 && <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs text-gold-foreground">{requests.length}</span>}
+        </h2>
+        {!requests?.length ? (
+          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Inga väntande ansökningar.</div>
+        ) : (
+          <div className="space-y-2">
+            {requests.map((r: any) => (
+              <div key={r.id} className="flex items-center justify-between rounded-lg border bg-card p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+                    {r.profile?.avatar_url ? (
+                      <img src={r.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-muted-foreground">
+                        {(r.profile?.display_name ?? "??").slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-medium">{r.profile?.display_name ?? "Okänd"}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {new Date(r.created_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => decideRequest.mutate({ id: r.id, approve: true })} title="Godkänn">
+                    <Check className="h-4 w-4 text-success" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => decideRequest.mutate({ id: r.id, approve: false })} title="Avvisa">
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section>
         <h2 className="mb-3 font-semibold">Medlemmar</h2>

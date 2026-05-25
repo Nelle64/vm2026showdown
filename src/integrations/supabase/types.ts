@@ -139,6 +139,39 @@ export type Database = {
           },
         ]
       }
+      game_join_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          game_id: string
+          id: string
+          message: string | null
+          status: Database["public"]["Enums"]["join_request_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          game_id: string
+          id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["join_request_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          game_id?: string
+          id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["join_request_status"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       game_members: {
         Row: {
           game_id: string
@@ -416,6 +449,15 @@ export type Database = {
         Returns: boolean
       }
       is_match_locked: { Args: { _match_id: string }; Returns: boolean }
+      request_join_by_code: {
+        Args: { _code: string }
+        Returns: {
+          already_member: boolean
+          game_id: string
+          game_name: string
+          status: Database["public"]["Enums"]["join_request_status"]
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
@@ -427,6 +469,7 @@ export type Database = {
         | "team"
         | "player"
         | "multiple_choice"
+      join_request_status: "pending" | "approved" | "rejected"
       match_status:
         | "scheduled"
         | "locked"
@@ -571,6 +614,7 @@ export const Constants = {
         "player",
         "multiple_choice",
       ],
+      join_request_status: ["pending", "approved", "rejected"],
       match_status: [
         "scheduled",
         "locked",

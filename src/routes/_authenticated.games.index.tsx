@@ -52,18 +52,48 @@ function GamesPage() {
     mutationFn: async () => {
       const trimmed = code.trim().toUpperCase();
       if (!trimmed) throw new Error("Ange en kod");
-      const { data: g, error: e1 } = await supabase.from("games").select("id").eq("invite_code", trimmed).maybeSingle();
-      if (e1 || !g) throw new Error("Hittade inget spel med den koden");
-      const { error: e2 } = await supabase.from("game_members").insert({ game_id: g.id, user_id: user!.id });
-      if (e2 && !e2.message.includes("duplicate")) throw e2;
-      return g.id;
+      const { data, error } = await supabase.rpc("request_join_by_code", { _code: trimmed });
+      if (error) {
+        if (error.message.includes("invalid code")) throw new Error("Hittade inget spel med den koden");
+        throw error;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      return row as { game_id: string; game_name: string; status: "pending" | "approved" | "rejected"; already_member: boolean };
     },
-    onSuccess: (id) => {
-      toast.success("Du är med!");
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["my-games"] });
+      qc.invalidateQueries({ queryKey: ["my-requests"] });
       setMode("none"); setCode("");
-      navigate({ to: `/games/${id}/matches` });
+      if (r.already_member || r.status === "approved") {
+        toast.success("Du är med!");
+        navigate({ to: `/games/${r.game_id}/matches` });
+      } else if (r.status === "pending") {
+        toast.success(`Ansökan skickad till ${r.game_name}. Väntar på godkännande.`);
+      } else {
+        toast.error("Din ansökan blev avvisad tidigare. Kontakta admin.");
+      }
     },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const { data: myRequests } = useQuery({
+    queryKey: ["my-requests", user!.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("game_join_requests")
+        .select("id, status, created_at, game_id")
+        .eq("user_id", user!.id)
+        .in("status", ["pending", "rejected"]);
+      return data ?? [];
+    },
+  });
+
+  const cancelRequest = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("game_join_requests").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Ansökan tillbakadragen"); qc.invalidateQueries({ queryKey: ["my-requests"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -105,15 +135,35 @@ function GamesPage() {
 
       {mode === "join" && (
         <div className="mb-4 rounded-xl border bg-card p-4">
-          <h3 className="mb-3 font-semibold">Gå med via kod</h3>
+          <h3 className="mb-1 font-semibold">Ansök via kod</h3>
+          <p className="mb-3 text-xs text-muted-foreground">Admin för spelet godkänner din ansökan.</p>
           <div className="flex gap-2">
             <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCD1234" maxLength={16}
               className="h-11 flex-1 rounded-md border bg-background px-3 font-mono uppercase tracking-wider" />
             <Button onClick={() => joinGame.mutate()} disabled={joinGame.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
-              Gå med
+              Ansök
             </Button>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setMode("none")} className="mt-2">Avbryt</Button>
+        </div>
+      )}
+
+      {myRequests && myRequests.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mina ansökningar</div>
+          {myRequests.map((r: any) => (
+            <div key={r.id} className="flex items-center justify-between rounded-lg border bg-card p-3 text-sm">
+              <div>
+                <div className="font-mono text-xs text-muted-foreground">Spel-ID: {r.game_id.slice(0, 8)}...</div>
+                <div className={r.status === "pending" ? "text-gold" : "text-destructive"}>
+                  {r.status === "pending" ? "Väntar på godkännande" : "Avvisad"}
+                </div>
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => cancelRequest.mutate(r.id)}>
+                Avbryt
+              </Button>
+            </div>
+          ))}
         </div>
       )}
 
