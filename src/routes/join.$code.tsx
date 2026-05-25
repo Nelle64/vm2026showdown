@@ -15,7 +15,6 @@ function JoinPage() {
   useEffect(() => {
     if (loading || ran.current) return;
     if (!user) {
-      // Spara invite-koden så vi kan slutföra efter login
       if (typeof window !== "undefined") localStorage.setItem("pending_invite", code);
       navigate({ to: "/login" });
       return;
@@ -23,26 +22,30 @@ function JoinPage() {
     ran.current = true;
     (async () => {
       const trimmed = code.trim().toUpperCase();
-      const { data: g, error } = await supabase.from("games").select("id, name").eq("invite_code", trimmed).maybeSingle();
-      if (error || !g) {
-        toast.error("Ogiltig invite-länk");
+      const { data, error } = await supabase.rpc("request_join_by_code", { _code: trimmed });
+      if (typeof window !== "undefined") localStorage.removeItem("pending_invite");
+      if (error) {
+        toast.error(error.message.includes("invalid code") ? "Ogiltig invite-länk" : error.message);
         navigate({ to: "/games" });
         return;
       }
-      const { error: e2 } = await supabase.from("game_members").insert({ game_id: g.id, user_id: user.id });
-      if (e2 && !e2.message.includes("duplicate")) {
-        toast.error(e2.message);
+      const row: any = Array.isArray(data) ? data[0] : data;
+      if (row?.already_member || row?.status === "approved") {
+        toast.success(`Du är med i ${row.game_name}!`);
+        navigate({ to: `/games/${row.game_id}/matches` });
+      } else if (row?.status === "pending") {
+        toast.success(`Ansökan skickad till ${row.game_name}. Väntar på godkännande.`);
+        navigate({ to: "/games" });
       } else {
-        toast.success(`Du är med i ${g.name}!`);
+        toast.error("Din ansökan blev avvisad. Kontakta admin.");
+        navigate({ to: "/games" });
       }
-      if (typeof window !== "undefined") localStorage.removeItem("pending_invite");
-      navigate({ to: `/games/${g.id}/matches` });
     })();
   }, [user, loading, code, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-      Ansluter till spel...
+      Skickar ansökan...
     </div>
   );
 }
