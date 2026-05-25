@@ -70,7 +70,11 @@ function LeaderboardPage() {
   if (isLoading) return <div className="text-muted-foreground">Laddar tabell...</div>;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Poängställning</h2>
+        <div className="space-y-2">
+
       {data?.map((r, i) => (
         <div key={r.user_id} className={cn(
           "flex items-center gap-3 rounded-xl border bg-card p-3",
