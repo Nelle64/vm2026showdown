@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
+import { useGameLock } from "@/lib/use-game-lock";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/matches")({ component: MatchesPage });
 
 function MatchesPage() {
   const { gameId } = useParams({ from: "/_authenticated/games/$gameId/matches" });
   const { user } = useAuth();
+  const { getLockAt } = useGameLock(gameId);
 
   const { data: matches, isLoading } = useQuery({
     queryKey: ["matches"],
@@ -51,7 +53,7 @@ function MatchesPage() {
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{day}</h2>
           <div className="space-y-3">
             {list.map((m) => (
-              <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} />
+              <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} lockAt={getLockAt(m.id)} />
             ))}
           </div>
         </section>
