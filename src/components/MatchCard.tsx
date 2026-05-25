@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./StatusBadge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export interface MatchRow {
   id: string;
@@ -122,6 +123,102 @@ export function MatchCard({ match, gameId, userId, prediction, lockAt }: Props) 
           </div>
         )}
       </div>
+
+      {locked && <AllPicks matchId={match.id} gameId={gameId} finished={finished} match={match} />}
+    </div>
+  );
+}
+
+function AllPicks({ matchId, gameId, finished, match }: { matchId: string; gameId: string; finished: boolean; match: MatchRow }) {
+  const [open, setOpen] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["all-picks", gameId, matchId],
+    enabled: open,
+    queryFn: async () => {
+      const { data: picks, error } = await supabase
+        .from("predictions")
+        .select("user_id, home_score, away_score, points")
+        .eq("game_id", gameId)
+        .eq("match_id", matchId);
+      if (error) throw error;
+      const list = picks ?? [];
+      if (list.length === 0) return [];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", list.map((p) => p.user_id));
+      const map = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+      return list
+        .map((p) => ({ ...p, profile: map.get(p.user_id) ?? null }))
+        .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+    },
+  });
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+      >
+        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        {open ? "Dölj alla gissningar" : "Visa alla gissningar"}
+      </button>
+      {open && (
+        <div className="mt-2 overflow-hidden rounded-lg border">
+          {isLoading ? (
+            <div className="p-3 text-center text-xs text-muted-foreground">Laddar...</div>
+          ) : !data?.length ? (
+            <div className="p-3 text-center text-xs text-muted-foreground">Inga gissningar</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-1.5 text-left font-medium">Spelare</th>
+                  <th className="px-3 py-1.5 text-center font-medium">Gissning</th>
+                  {finished && <th className="px-3 py-1.5 text-right font-medium">Poäng</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((p) => {
+                  const exact = finished && p.home_score === match.home_score && p.away_score === match.away_score;
+                  return (
+                    <tr key={p.user_id} className="border-t">
+                      <td className="px-3 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-muted">
+                            {p.profile?.avatar_url ? (
+                              <img src={p.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[9px] font-bold text-muted-foreground">
+                                {(p.profile?.display_name ?? "??").slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-medium">{p.profile?.display_name ?? "Okänd"}</span>
+                        </div>
+                      </td>
+                      <td className={cn("px-3 py-1.5 text-center font-bold tabular-nums", exact && "text-gold")}>
+                        {p.home_score}–{p.away_score}
+                      </td>
+                      {finished && (
+                        <td className="px-3 py-1.5 text-right">
+                          <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-bold",
+                            p.points === 3 ? "bg-gold text-gold-foreground" :
+                            p.points === 1 ? "bg-success/20 text-success" :
+                            "bg-muted text-muted-foreground")}>
+                            {p.points ?? 0}
+                          </span>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 }
