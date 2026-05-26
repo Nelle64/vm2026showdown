@@ -1,19 +1,10 @@
 import type { FootballProvider, ApiMatch, ApiTeam } from "./provider";
+import { flagFromFifaOrTla as flagFromTla } from "./fifa-iso";
 
 // football-data.org provider. Gratisplanen täcker VM (competition code "WC").
 // Auth: X-Auth-Token header.
 const BASE = "https://api.football-data.org/v4";
 const COMP = "WC";
-
-// ISO landskod -> flagg-emoji
-function flagFromTla(tla?: string | null): string | undefined {
-  if (!tla || tla.length < 2) return undefined;
-  const two = tla.slice(0, 2).toUpperCase();
-  const A = 0x41, base = 0x1f1e6;
-  const cps = [...two].map((c) => base + (c.charCodeAt(0) - A));
-  if (cps.some((cp) => cp < base || cp > base + 25)) return undefined;
-  return String.fromCodePoint(...cps);
-}
 
 export function footballDataProvider(apiKey: string): FootballProvider {
   const headers = { "X-Auth-Token": apiKey };
