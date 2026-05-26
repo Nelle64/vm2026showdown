@@ -115,14 +115,14 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
             return (
               <tr key={m.id} className="border-t">
                 <td className="sticky left-0 z-10 bg-card px-3 py-2 text-xs">
-                  <div className="flex items-center gap-1 whitespace-nowrap">
-                    <span>{m.home.flag_emoji ?? "🏳️"}</span>
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="text-lg leading-none">{m.home.flag_emoji ?? "🏳️"}</span>
                     <span className="font-semibold">{m.home.code}</span>
                     <span className="text-muted-foreground">–</span>
                     <span className="font-semibold">{m.away.code}</span>
-                    <span>{m.away.flag_emoji ?? "🏳️"}</span>
+                    <span className="text-lg leading-none">{m.away.flag_emoji ?? "🏳️"}</span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">
                     {format(new Date(m.kickoff_at), "d MMM HH:mm", { locale: sv })}
                   </div>
                 </td>
