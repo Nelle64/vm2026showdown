@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import type { GameLockMode } from "@/lib/use-game-lock";
+import { TeamFlag } from "@/components/TeamFlag";
 
 export function LockSettingsSection({ gameId }: { gameId: string }) {
   const qc = useQueryClient();
@@ -280,8 +281,12 @@ function MatchPicker({ roundId, gameId }: { roundId: string; gameId: string }) {
                 onChange={(e) => toggle.mutate({ matchId: m.id, checked: e.target.checked })}
                 className="h-4 w-4"
               />
-              <span className="flex-1 truncate">
-                {m.home?.flag_emoji} {m.home?.code} – {m.away?.code} {m.away?.flag_emoji}
+              <span className="flex flex-1 items-center gap-1.5 truncate">
+                <TeamFlag code={m.home?.code} className="h-4 w-6" />
+                <span>{m.home?.code}</span>
+                <span className="text-muted-foreground">–</span>
+                <span>{m.away?.code}</span>
+                <TeamFlag code={m.away?.code} className="h-4 w-6" />
               </span>
               <span className="shrink-0 text-[10px] text-muted-foreground">
                 {new Date(m.kickoff_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
