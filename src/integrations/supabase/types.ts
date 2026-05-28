@@ -520,6 +520,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_any_game_admin: { Args: { _user_id: string }; Returns: boolean }
       is_bonus_open: { Args: { _question_id: string }; Returns: boolean }
       is_game_admin: {
         Args: { _game_id: string; _user_id: string }
