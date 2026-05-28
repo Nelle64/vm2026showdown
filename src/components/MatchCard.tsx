@@ -8,6 +8,7 @@ import { StatusBadge } from "./StatusBadge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { TeamFlag } from "@/components/TeamFlag";
 
 export interface MatchRow {
   id: string;
@@ -226,12 +227,12 @@ function AllPicks({ matchId, gameId, finished, match }: { matchId: string; gameI
 function TeamSide({ team, align }: { team: MatchRow["home"]; align: "left" | "right" }) {
   return (
     <div className={cn("flex items-center gap-2", align === "right" ? "justify-end" : "justify-start")}>
-      {align === "left" && <span className="text-2xl">{team.flag_emoji ?? "🏳️"}</span>}
+      {align === "left" && <TeamFlag code={team.code} label={`${team.name} flagga`} className="h-6 w-8" />}
       <div className={cn(align === "right" ? "text-right" : "text-left")}>
         <div className="font-semibold leading-tight">{team.name}</div>
         <div className="text-xs text-muted-foreground">{team.code}</div>
       </div>
-      {align === "right" && <span className="text-2xl">{team.flag_emoji ?? "🏳️"}</span>}
+      {align === "right" && <TeamFlag code={team.code} label={`${team.name} flagga`} className="h-6 w-8" />}
     </div>
   );
 }
