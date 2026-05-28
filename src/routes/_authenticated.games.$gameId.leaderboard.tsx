@@ -61,8 +61,9 @@ function LeaderboardPage() {
         const bonusPts = myBonus.reduce((s: number, p: any) => s + (p.points ?? 0), 0);
         return {
           user_id: m.user_id,
-          name: m.profile?.display_name ?? "Okänd",
-          avatar: m.profile?.avatar_url ?? null,
+          name: prof?.display_name ?? "Okänd",
+          avatar: prof?.avatar_url ?? null,
+
           total: mainPts + bonusPts,
           bonus: bonusPts,
           exact, outcome, wrong, picks: myPreds.length,
