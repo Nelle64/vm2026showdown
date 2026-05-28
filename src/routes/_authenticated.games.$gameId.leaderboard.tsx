@@ -32,18 +32,25 @@ function LeaderboardPage() {
       // hämta medlemmar + deras predictions/bonus i detta spel
       const { data: members, error } = await supabase
         .from("game_members")
-        .select("user_id, profile:profiles(id, display_name, avatar_url)")
+        .select("user_id")
         .eq("game_id", gameId);
       if (error) throw error;
 
-      const userIds = members.map((m: any) => m.user_id);
+      const userIds = (members ?? []).map((m: any) => m.user_id);
+      const { data: profiles } = userIds.length
+        ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", userIds)
+        : { data: [] as any[] };
+      const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+
       const { data: preds } = await supabase.from("predictions")
         .select("user_id, points").eq("game_id", gameId).in("user_id", userIds);
       const { data: bonus } = await supabase.from("bonus_answers")
         .select("user_id, points, question:bonus_questions!inner(game_id)").eq("question.game_id", gameId).in("user_id", userIds);
 
       type Row = { user_id: string; name: string; avatar: string | null; total: number; bonus: number; exact: number; outcome: number; wrong: number; picks: number; accuracy: number };
-      const rows: Row[] = members.map((m: any) => {
+      const rows: Row[] = (members ?? []).map((m: any) => {
+        const prof = profMap.get(m.user_id);
+
         const myPreds = (preds ?? []).filter((p: any) => p.user_id === m.user_id);
         const myBonus = (bonus ?? []).filter((b: any) => b.user_id === m.user_id);
         const scored = myPreds.filter((p: any) => p.points !== null);
