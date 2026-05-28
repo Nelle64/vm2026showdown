@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Trash2, UserCheck, RefreshCw, Copy, Plus, X, Check, XCircle } from "lucide-react";
 import { LockSettingsSection } from "@/components/admin/LockSettingsSection";
+import { TeamFlag } from "@/components/TeamFlag";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/admin")({ component: AdminPage });
 
@@ -398,8 +399,12 @@ function ResultRow({ m, onSave, pending }: { m: any; onSave: (h: number, a: numb
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">
-          {m.home?.flag_emoji} {m.home?.code} – {m.away?.code} {m.away?.flag_emoji}
+        <div className="flex items-center gap-1.5 truncate text-sm font-medium">
+          <TeamFlag code={m.home?.code} className="h-4 w-6" />
+          <span>{m.home?.code}</span>
+          <span className="text-muted-foreground">–</span>
+          <span>{m.away?.code}</span>
+          <TeamFlag code={m.away?.code} className="h-4 w-6" />
         </div>
         <div className="text-[11px] text-muted-foreground">
           {new Date(m.kickoff_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
