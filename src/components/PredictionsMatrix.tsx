@@ -4,6 +4,7 @@ import { useGameLock } from "@/lib/use-game-lock";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
+import { TeamFlag } from "@/components/TeamFlag";
 
 interface MatchRow {
   id: string;
@@ -116,11 +117,11 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
               <tr key={m.id} className="border-t">
                 <td className="sticky left-0 z-10 bg-card px-3 py-2 text-xs">
                   <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="text-lg leading-none">{m.home.flag_emoji ?? "🏳️"}</span>
+                    <TeamFlag code={m.home.code} className="h-4 w-6" />
                     <span className="font-semibold">{m.home.code}</span>
                     <span className="text-muted-foreground">–</span>
                     <span className="font-semibold">{m.away.code}</span>
-                    <span className="text-lg leading-none">{m.away.flag_emoji ?? "🏳️"}</span>
+                    <TeamFlag code={m.away.code} className="h-4 w-6" />
                   </div>
                   <div className="mt-0.5 text-[10px] text-muted-foreground">
                     {format(new Date(m.kickoff_at), "d MMM HH:mm", { locale: sv })}
