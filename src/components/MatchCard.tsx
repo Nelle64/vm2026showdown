@@ -29,9 +29,11 @@ interface Props {
   prediction?: { home_score: number; away_score: number; points: number | null } | null;
   /** Effektiv låstid (ISO). Om angiven används denna istället för kickoff_at - 1 min. */
   lockAt?: string | null;
+  /** Omgångsnamn (visas när spelet körs i per_round-läge). */
+  roundName?: string | null;
 }
 
-export function MatchCard({ match, gameId, userId, prediction, lockAt }: Props) {
+export function MatchCard({ match, gameId, userId, prediction, lockAt, roundName }: Props) {
   const qc = useQueryClient();
   const [home, setHome] = useState<string>(prediction ? String(prediction.home_score) : "");
   const [away, setAway] = useState<string>(prediction ? String(prediction.away_score) : "");
