@@ -202,6 +202,10 @@ function AdminPage() {
 
       <ResultsSection />
 
+      <PredictionStatusSection gameId={gameId} />
+
+
+
       <section>
         <h2 className="mb-3 font-semibold">
           Ansökningar {requests && requests.length > 0 && <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs text-gold-foreground">{requests.length}</span>}
