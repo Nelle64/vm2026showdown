@@ -3,10 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type GameLockMode = "per_match" | "per_round";
 
+export interface MatchLockInfo {
+  lockAt: string | null;
+  roundName: string | null;
+}
+
 /**
- * Returnerar effektiv lås-tidpunkt per match-id för ett spel.
- * - per_match: kickoff_at - 1 min (vi returnerar null så MatchCard kan falla tillbaka)
- * - per_round: round.lock_at, eller min(kickoff) - 1 min om null
+ * Returnerar effektiv lås-tidpunkt + ev. omgångsnamn per match-id för ett spel.
  */
 export function useGameLock(gameId: string) {
   const { data: game } = useQuery({
@@ -19,15 +22,15 @@ export function useGameLock(gameId: string) {
 
   const mode: GameLockMode = game?.lock_mode ?? "per_match";
 
-  const { data: roundLocks } = useQuery({
+  const { data: roundInfo } = useQuery({
     queryKey: ["round-locks", gameId],
     enabled: mode === "per_round",
     queryFn: async () => {
       const { data: rounds } = await supabase
         .from("rounds")
-        .select("id, lock_at, round_matches(match_id, match:matches(kickoff_at))")
+        .select("id, name, lock_at, round_matches(match_id, match:matches(kickoff_at))")
         .eq("game_id", gameId);
-      const map = new Map<string, string>(); // matchId -> lockAt ISO
+      const map = new Map<string, MatchLockInfo>();
       (rounds ?? []).forEach((r: any) => {
         let lockAt: string | null = r.lock_at;
         if (!lockAt && r.round_matches?.length) {
@@ -39,11 +42,9 @@ export function useGameLock(gameId: string) {
             lockAt = new Date(new Date(earliest).getTime() - 60_000).toISOString();
           }
         }
-        if (lockAt) {
-          r.round_matches?.forEach((rm: any) => {
-            map.set(rm.match_id, lockAt!);
-          });
-        }
+        r.round_matches?.forEach((rm: any) => {
+          map.set(rm.match_id, { lockAt, roundName: r.name ?? null });
+        });
       });
       return map;
     },
@@ -52,7 +53,11 @@ export function useGameLock(gameId: string) {
   return {
     mode,
     getLockAt: (matchId: string): string | null => {
-      if (mode === "per_round") return roundLocks?.get(matchId) ?? null;
+      if (mode === "per_round") return roundInfo?.get(matchId)?.lockAt ?? null;
+      return null;
+    },
+    getRoundName: (matchId: string): string | null => {
+      if (mode === "per_round") return roundInfo?.get(matchId)?.roundName ?? null;
       return null;
     },
   };

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/games/$gameId/matches")({ 
 function MatchesPage() {
   const { gameId } = useParams({ from: "/_authenticated/games/$gameId/matches" });
   const { user } = useAuth();
-  const { getLockAt } = useGameLock(gameId);
+  const { getLockAt, getRoundName } = useGameLock(gameId);
 
   const { data: matches, isLoading } = useQuery({
     queryKey: ["matches"],
@@ -53,7 +53,7 @@ function MatchesPage() {
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{day}</h2>
           <div className="space-y-3">
             {list.map((m) => (
-              <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} lockAt={getLockAt(m.id)} />
+              <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} lockAt={getLockAt(m.id)} roundName={getRoundName(m.id)} />
             ))}
           </div>
         </section>
