@@ -202,6 +202,10 @@ function AdminPage() {
 
       <ResultsSection />
 
+      <PredictionStatusSection gameId={gameId} />
+
+
+
       <section>
         <h2 className="mb-3 font-semibold">
           Ansökningar {requests && requests.length > 0 && <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs text-gold-foreground">{requests.length}</span>}
@@ -421,3 +425,117 @@ function ResultRow({ m, onSave, pending }: { m: any; onSave: (h: number, a: numb
     </div>
   );
 }
+
+function PredictionStatusSection({ gameId }: { gameId: string }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const { data } = useQuery({
+    queryKey: ["admin-prediction-status", gameId],
+    queryFn: async () => {
+      const [{ data: memberRows }, { data: matches }] = await Promise.all([
+        supabase.from("game_members").select("user_id").eq("game_id", gameId),
+        supabase.from("matches")
+          .select("id, kickoff_at, status, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)")
+          .gt("kickoff_at", new Date().toISOString())
+          .eq("status", "scheduled")
+          .order("kickoff_at"),
+      ]);
+      const memberIds = (memberRows ?? []).map((m) => m.user_id);
+      if (memberIds.length === 0 || !matches?.length) return { matches: [], members: [] as any[] };
+
+      const { data: profiles } = await supabase
+        .from("profiles").select("id, display_name").in("id", memberIds);
+      const { data: preds } = await supabase
+        .from("predictions").select("match_id, user_id")
+        .eq("game_id", gameId)
+        .in("match_id", matches.map((m: any) => m.id));
+
+      const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p.display_name as string]));
+      const byMatch = new Map<string, Set<string>>();
+      for (const p of preds ?? []) {
+        if (!byMatch.has(p.match_id)) byMatch.set(p.match_id, new Set());
+        byMatch.get(p.match_id)!.add(p.user_id);
+      }
+      const enriched = matches.map((m: any) => {
+        const tipped = byMatch.get(m.id) ?? new Set();
+        const missing = memberIds
+          .filter((id) => !tipped.has(id))
+          .map((id) => profMap.get(id) ?? "Okänd")
+          .sort((a, b) => a.localeCompare(b, "sv"));
+        return { ...m, tippedCount: tipped.size, missing };
+      });
+      return { matches: enriched, total: memberIds.length };
+    },
+  });
+
+  const copyMissing = (names: string[]) => {
+    navigator.clipboard.writeText(names.join(", "));
+    toast.success("Namnlista kopierad");
+  };
+
+  return (
+    <section>
+      <h2 className="mb-3 font-semibold">Tippstatus</h2>
+      {!data?.matches?.length ? (
+        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          Inga kommande matcher att visa.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {data.matches.map((m: any) => {
+            const total = (data as any).total as number;
+            const isOpen = openId === m.id;
+            const allDone = m.missing.length === 0;
+            return (
+              <div key={m.id} className="rounded-lg border bg-card p-3">
+                <button
+                  type="button"
+                  onClick={() => setOpenId(isOpen ? null : m.id)}
+                  className="flex w-full items-center justify-between gap-3 text-left"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      <TeamFlag code={m.home?.code} className="h-4 w-6" />
+                      <span>{m.home?.code}</span>
+                      <span className="text-muted-foreground">–</span>
+                      <span>{m.away?.code}</span>
+                      <TeamFlag code={m.away?.code} className="h-4 w-6" />
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {new Date(m.kickoff_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                  <div className={"shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold " + (allDone ? "bg-success/15 text-success" : "bg-muted text-muted-foreground")}>
+                    {m.tippedCount}/{total} tippat
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="mt-3 border-t pt-3">
+                    {allDone ? (
+                      <div className="text-xs text-success">Alla har tippat 🎉</div>
+                    ) : (
+                      <>
+                        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Saknas ({m.missing.length})
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.missing.map((name: string) => (
+                            <span key={name} className="rounded-full bg-muted px-2 py-0.5 text-xs">{name}</span>
+                          ))}
+                        </div>
+                        <Button size="sm" variant="outline" className="mt-3" onClick={() => copyMissing(m.missing)}>
+                          <Copy className="mr-1 h-3 w-3" /> Kopiera namnlista
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
