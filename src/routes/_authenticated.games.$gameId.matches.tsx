@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
 import { useGameLock } from "@/lib/use-game-lock";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useMemo } from "react";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/matches")({ component: MatchesPage });
 
@@ -35,29 +37,57 @@ function MatchesPage() {
     },
   });
 
+  const groups = useMemo(() => {
+    if (!matches) return [];
+    const buckets = new Map<string, MatchRow[]>();
+    matches.forEach((m) => {
+      const key = getRoundName(m.id) ?? fallbackBucket(m);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key)!.push(m);
+    });
+    return Array.from(buckets.entries()).map(([name, list]) => ({
+      name,
+      list,
+      earliest: list[0]?.kickoff_at ?? "",
+      tippable: list.some((m) => m.status === "scheduled"),
+    }));
+  }, [matches, getRoundName]);
+
+  const defaultOpen = useMemo(() => {
+    const now = Date.now();
+    const next = groups.find((g) => g.list.some((m) => new Date(m.kickoff_at).getTime() > now));
+    return next?.name ? [next.name] : groups[0]?.name ? [groups[0].name] : [];
+  }, [groups]);
+
   if (isLoading) return <div className="text-muted-foreground">Laddar matcher...</div>;
   if (!matches?.length) return <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Inga matcher ännu.</div>;
 
-  // Gruppera per dag
-  const groups: Record<string, MatchRow[]> = {};
-  matches.forEach((m) => {
-    const d = new Date(m.kickoff_at).toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
-    groups[d] = groups[d] ?? [];
-    groups[d].push(m);
-  });
-
   return (
-    <div className="space-y-6">
-      {Object.entries(groups).map(([day, list]) => (
-        <section key={day}>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{day}</h2>
-          <div className="space-y-3">
-            {list.map((m) => (
-              <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} lockAt={getLockAt(m.id)} roundName={getRoundName(m.id)} />
-            ))}
-          </div>
-        </section>
+    <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
+      {groups.map((g) => (
+        <AccordionItem key={g.name} value={g.name} className="rounded-xl border bg-card px-3">
+          <AccordionTrigger className="py-3 hover:no-underline">
+            <div className="flex w-full items-center justify-between gap-3 pr-2">
+              <span className="text-sm font-semibold">{g.name}</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {g.list.length} matcher
+              </span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-3 pb-2">
+              {g.list.map((m) => (
+                <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} lockAt={getLockAt(m.id)} roundName={getRoundName(m.id)} />
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
       ))}
-    </div>
+    </Accordion>
   );
+}
+
+function fallbackBucket(m: MatchRow): string {
+  if (m.stage === "group") return m.group_letter ? `Grupp ${m.group_letter}` : "Gruppspel";
+  return "Slutspel";
 }
