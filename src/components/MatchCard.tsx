@@ -18,8 +18,8 @@ export interface MatchRow {
   away_score: number | null;
   stage: string;
   group_letter: string | null;
-  home: { code: string; name: string; flag_emoji: string | null };
-  away: { code: string; name: string; flag_emoji: string | null };
+  home: { id?: string; code: string; name: string; flag_emoji: string | null };
+  away: { id?: string; code: string; name: string; flag_emoji: string | null };
 }
 
 interface Props {
