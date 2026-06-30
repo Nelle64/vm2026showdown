@@ -26,17 +26,22 @@ export function apiFootballProvider(apiKey: string): FootballProvider {
     async fetchMatches() {
       const res = await fetch(`${BASE}/fixtures?league=${WC_LEAGUE}&season=${SEASON}`, { headers });
       const json = await res.json();
-      return (json.response ?? []).map((f: any): ApiMatch => ({
-        externalId: String(f.fixture.id),
-        homeTeamCode: f.teams.home.code ?? f.teams.home.name.slice(0, 3).toUpperCase(),
-        awayTeamCode: f.teams.away.code ?? f.teams.away.name.slice(0, 3).toUpperCase(),
-        kickoffISO: f.fixture.date,
-        status: mapStatus(f.fixture.status.short),
-        homeScore: f.goals.home,
-        awayScore: f.goals.away,
-        stage: f.league.round?.toLowerCase().includes("group") ? "group" : "knockout",
-        venue: f.fixture.venue?.name,
-      }));
+      return (json.response ?? []).map((f: any): ApiMatch => {
+        // Tippning baseras på 90 min — score.fulltime, inte goals (som inkluderar ET/straffar).
+        const home = f.score?.fulltime?.home ?? f.goals?.home ?? null;
+        const away = f.score?.fulltime?.away ?? f.goals?.away ?? null;
+        return {
+          externalId: String(f.fixture.id),
+          homeTeamCode: f.teams.home.code ?? f.teams.home.name.slice(0, 3).toUpperCase(),
+          awayTeamCode: f.teams.away.code ?? f.teams.away.name.slice(0, 3).toUpperCase(),
+          kickoffISO: f.fixture.date,
+          status: mapStatus(f.fixture.status.short),
+          homeScore: home,
+          awayScore: away,
+          stage: f.league.round?.toLowerCase().includes("group") ? "group" : "knockout",
+          venue: f.fixture.venue?.name,
+        };
+      });
     },
   };
 }
