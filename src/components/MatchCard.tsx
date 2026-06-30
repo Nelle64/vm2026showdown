@@ -85,6 +85,8 @@ export function MatchCard({ match, gameId, userId, prediction, lockAt, roundName
   const deadline = new Date(lockTime);
   const stageLabel = match.stage === "group" ? `Grupp ${match.group_letter}` : match.stage;
 
+  const hasPrediction = Boolean(prediction);
+
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -93,6 +95,9 @@ export function MatchCard({ match, gameId, userId, prediction, lockAt, roundName
           {roundName && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">{roundName}</span>}
         </span>
         <div className="flex items-center gap-2">
+          {!locked && !hasPrediction && (
+            <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-gold-foreground">Ej tippad</span>
+          )}
           <span>{format(kickoff, "EEE d MMM HH:mm", { locale: sv })}</span>
           <StatusBadge status={match.status} kickoffAt={match.kickoff_at} />
         </div>
