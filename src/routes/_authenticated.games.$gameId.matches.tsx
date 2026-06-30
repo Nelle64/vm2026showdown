@@ -45,13 +45,18 @@ function MatchesPage() {
       if (!buckets.has(key)) buckets.set(key, []);
       buckets.get(key)!.push(m);
     });
-    return Array.from(buckets.entries()).map(([name, list]) => ({
-      name,
-      list,
-      earliest: list[0]?.kickoff_at ?? "",
-      tippable: list.some((m) => m.status === "scheduled"),
-    }));
-  }, [matches, getRoundName]);
+    return Array.from(buckets.entries()).map(([name, list]) => {
+      const unpicked = list.filter((m) => !predictions?.get(m.id) && m.status === "scheduled").length;
+      return {
+        name,
+        list,
+        earliest: list[0]?.kickoff_at ?? "",
+        tippable: list.some((m) => m.status === "scheduled"),
+        unpicked,
+      };
+    });
+  }, [matches, getRoundName, predictions]);
+
 
   const defaultOpen = useMemo(() => {
     const now = Date.now();
