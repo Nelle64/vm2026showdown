@@ -18,7 +18,7 @@ function MatchesPage() {
     queryKey: ["matches"],
     queryFn: async () => {
       const { data, error } = await supabase.from("matches")
-        .select("id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(code,name,flag_emoji), away:teams!matches_away_team_id_fkey(code,name,flag_emoji)")
+        .select("id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,code,name,flag_emoji), away:teams!matches_away_team_id_fkey(id,code,name,flag_emoji)")
         .order("kickoff_at");
       if (error) throw error;
       return data as unknown as MatchRow[];
