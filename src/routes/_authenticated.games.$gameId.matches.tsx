@@ -45,13 +45,18 @@ function MatchesPage() {
       if (!buckets.has(key)) buckets.set(key, []);
       buckets.get(key)!.push(m);
     });
-    return Array.from(buckets.entries()).map(([name, list]) => ({
-      name,
-      list,
-      earliest: list[0]?.kickoff_at ?? "",
-      tippable: list.some((m) => m.status === "scheduled"),
-    }));
-  }, [matches, getRoundName]);
+    return Array.from(buckets.entries()).map(([name, list]) => {
+      const unpicked = list.filter((m) => !predictions?.get(m.id) && m.status === "scheduled").length;
+      return {
+        name,
+        list,
+        earliest: list[0]?.kickoff_at ?? "",
+        tippable: list.some((m) => m.status === "scheduled"),
+        unpicked,
+      };
+    });
+  }, [matches, getRoundName, predictions]);
+
 
   const defaultOpen = useMemo(() => {
     const now = Date.now();
@@ -69,9 +74,16 @@ function MatchesPage() {
           <AccordionTrigger className="py-3 hover:no-underline">
             <div className="flex w-full items-center justify-between gap-3 pr-2">
               <span className="text-sm font-semibold">{g.name}</span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {g.list.length} matcher
-              </span>
+              <div className="flex items-center gap-2">
+                {g.unpicked > 0 && (
+                  <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-gold-foreground">
+                    {g.unpicked} ej tippad{g.unpicked === 1 ? "" : "e"}
+                  </span>
+                )}
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {g.list.length} matcher
+                </span>
+              </div>
             </div>
           </AccordionTrigger>
           <AccordionContent>
