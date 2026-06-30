@@ -18,8 +18,8 @@ export interface MatchRow {
   away_score: number | null;
   stage: string;
   group_letter: string | null;
-  home: { code: string; name: string; flag_emoji: string | null };
-  away: { code: string; name: string; flag_emoji: string | null };
+  home: { id?: string; code: string; name: string; flag_emoji: string | null };
+  away: { id?: string; code: string; name: string; flag_emoji: string | null };
 }
 
 interface Props {
@@ -143,6 +143,98 @@ export function MatchCard({ match, gameId, userId, prediction, lockAt, roundName
       </div>
 
       {locked && <AllPicks matchId={match.id} gameId={gameId} finished={finished} match={match} />}
+
+      <TeamForm match={match} />
+    </div>
+  );
+}
+
+function TeamForm({ match }: { match: MatchRow }) {
+  const [open, setOpen] = useState(false);
+  const homeId = match.home?.id;
+  const awayId = match.away?.id;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["team-form", homeId, awayId, match.id],
+    enabled: open && Boolean(homeId && awayId),
+    queryFn: async () => {
+      const ids = [homeId!, awayId!];
+      const { data: rows, error } = await supabase
+        .from("matches")
+        .select("id, kickoff_at, home_score, away_score, status, home:teams!matches_home_team_id_fkey(id,code,name), away:teams!matches_away_team_id_fkey(id,code,name)")
+        .or(`home_team_id.in.(${ids.join(",")}),away_team_id.in.(${ids.join(",")})`)
+        .eq("status", "finished")
+        .neq("id", match.id)
+        .order("kickoff_at", { ascending: false })
+        .limit(40);
+      if (error) throw error;
+      const byTeam = (teamId: string) =>
+        (rows ?? []).filter((m: any) => m.home?.id === teamId || m.away?.id === teamId).slice(0, 5);
+      return { home: byTeam(homeId!), away: byTeam(awayId!) };
+    },
+  });
+
+  if (!homeId || !awayId) return null;
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+      >
+        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        {open ? "Dölj tidigare matcher" : "Visa tidigare matcher"}
+      </button>
+      {open && (
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <TeamFormColumn teamId={homeId} teamName={match.home.name} matches={data?.home ?? []} loading={isLoading} />
+          <TeamFormColumn teamId={awayId} teamName={match.away.name} matches={data?.away ?? []} loading={isLoading} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TeamFormColumn({ teamId, teamName, matches, loading }: {
+  teamId: string; teamName: string;
+  matches: Array<{ id: string; kickoff_at: string; home_score: number | null; away_score: number | null; home: any; away: any }>;
+  loading: boolean;
+}) {
+  return (
+    <div className="rounded-lg border bg-background/40 p-2">
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{teamName} · Senaste</div>
+      {loading ? (
+        <div className="py-2 text-center text-[11px] text-muted-foreground">Laddar…</div>
+      ) : matches.length === 0 ? (
+        <div className="py-2 text-center text-[11px] text-muted-foreground">Inga tidigare matcher</div>
+      ) : (
+        <div className="space-y-1">
+          {matches.map((m) => {
+            const isHome = m.home?.id === teamId;
+            const teamScore = isHome ? m.home_score : m.away_score;
+            const oppScore = isHome ? m.away_score : m.home_score;
+            const opp = isHome ? m.away : m.home;
+            const result = teamScore == null || oppScore == null
+              ? "?" : teamScore > oppScore ? "V" : teamScore < oppScore ? "F" : "O";
+            const resultClass =
+              result === "V" ? "bg-success/20 text-success" :
+              result === "F" ? "bg-destructive/20 text-destructive" :
+              "bg-muted text-muted-foreground";
+            return (
+              <div key={m.id} className="flex items-center gap-2 text-[11px]">
+                <span className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold", resultClass)}>
+                  {result}
+                </span>
+                <TeamFlag code={opp?.code} label={opp?.name} className="h-3 w-4" />
+                <span className="flex-1 truncate">{opp?.name ?? "?"}</span>
+                <span className="font-mono tabular-nums text-muted-foreground">
+                  {isHome ? `${teamScore}–${oppScore}` : `${oppScore}–${teamScore}`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

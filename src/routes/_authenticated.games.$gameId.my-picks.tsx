@@ -26,7 +26,7 @@ function MyPicksPage() {
     queryKey: ["my-picks", gameId, user!.id],
     queryFn: async () => {
       const { data: preds, error } = await supabase.from("predictions")
-        .select("match_id, home_score, away_score, points, match:matches(id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(code,name,flag_emoji), away:teams!matches_away_team_id_fkey(code,name,flag_emoji))")
+        .select("match_id, home_score, away_score, points, match:matches(id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,code,name,flag_emoji), away:teams!matches_away_team_id_fkey(id,code,name,flag_emoji))")
         .eq("game_id", gameId).eq("user_id", user!.id);
       if (error) throw error;
       return preds as unknown as PickRow[];
