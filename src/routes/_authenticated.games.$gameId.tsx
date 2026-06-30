@@ -45,6 +45,7 @@ function GameLayout() {
   const tabs = [
     { to: `/games/${gameId}/matches`, label: "Matcher" },
     { to: `/games/${gameId}/my-picks`, label: "Mina tips" },
+    { to: `/games/${gameId}/tournament`, label: "Turnering" },
     { to: `/games/${gameId}/bonus`, label: "Bonus" },
     { to: `/games/${gameId}/leaderboard`, label: "Tabell" },
     ...(isAdmin ? [{ to: `/games/${gameId}/admin`, label: "Admin" }] : []),
