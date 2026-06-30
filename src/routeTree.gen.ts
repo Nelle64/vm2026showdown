@@ -19,6 +19,7 @@ import { Route as AuthenticatedGamesRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedGamesIndexRouteImport } from './routes/_authenticated.games.index'
 import { Route as ApiPublicSyncRouteImport } from './routes/api/public/sync'
 import { Route as AuthenticatedGamesGameIdRouteImport } from './routes/_authenticated.games.$gameId'
+import { Route as AuthenticatedGamesGameIdTournamentRouteImport } from './routes/_authenticated.games.$gameId.tournament'
 import { Route as AuthenticatedGamesGameIdMyPicksRouteImport } from './routes/_authenticated.games.$gameId.my-picks'
 import { Route as AuthenticatedGamesGameIdMatchesRouteImport } from './routes/_authenticated.games.$gameId.matches'
 import { Route as AuthenticatedGamesGameIdLeaderboardRouteImport } from './routes/_authenticated.games.$gameId.leaderboard'
@@ -75,6 +76,12 @@ const AuthenticatedGamesGameIdRoute =
     path: '/$gameId',
     getParentRoute: () => AuthenticatedGamesRoute,
   } as any)
+const AuthenticatedGamesGameIdTournamentRoute =
+  AuthenticatedGamesGameIdTournamentRouteImport.update({
+    id: '/tournament',
+    path: '/tournament',
+    getParentRoute: () => AuthenticatedGamesGameIdRoute,
+  } as any)
 const AuthenticatedGamesGameIdMyPicksRoute =
   AuthenticatedGamesGameIdMyPicksRouteImport.update({
     id: '/my-picks',
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
   '/games/$gameId/matches': typeof AuthenticatedGamesGameIdMatchesRoute
   '/games/$gameId/my-picks': typeof AuthenticatedGamesGameIdMyPicksRoute
+  '/games/$gameId/tournament': typeof AuthenticatedGamesGameIdTournamentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -136,6 +144,7 @@ export interface FileRoutesByTo {
   '/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
   '/games/$gameId/matches': typeof AuthenticatedGamesGameIdMatchesRoute
   '/games/$gameId/my-picks': typeof AuthenticatedGamesGameIdMyPicksRoute
+  '/games/$gameId/tournament': typeof AuthenticatedGamesGameIdTournamentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -154,6 +163,7 @@ export interface FileRoutesById {
   '/_authenticated/games/$gameId/leaderboard': typeof AuthenticatedGamesGameIdLeaderboardRoute
   '/_authenticated/games/$gameId/matches': typeof AuthenticatedGamesGameIdMatchesRoute
   '/_authenticated/games/$gameId/my-picks': typeof AuthenticatedGamesGameIdMyPicksRoute
+  '/_authenticated/games/$gameId/tournament': typeof AuthenticatedGamesGameIdTournamentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/games/$gameId/leaderboard'
     | '/games/$gameId/matches'
     | '/games/$gameId/my-picks'
+    | '/games/$gameId/tournament'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/games/$gameId/leaderboard'
     | '/games/$gameId/matches'
     | '/games/$gameId/my-picks'
+    | '/games/$gameId/tournament'
   id:
     | '__root__'
     | '/'
@@ -204,6 +216,7 @@ export interface FileRouteTypes {
     | '/_authenticated/games/$gameId/leaderboard'
     | '/_authenticated/games/$gameId/matches'
     | '/_authenticated/games/$gameId/my-picks'
+    | '/_authenticated/games/$gameId/tournament'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -287,6 +300,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGamesGameIdRouteImport
       parentRoute: typeof AuthenticatedGamesRoute
     }
+    '/_authenticated/games/$gameId/tournament': {
+      id: '/_authenticated/games/$gameId/tournament'
+      path: '/tournament'
+      fullPath: '/games/$gameId/tournament'
+      preLoaderRoute: typeof AuthenticatedGamesGameIdTournamentRouteImport
+      parentRoute: typeof AuthenticatedGamesGameIdRoute
+    }
     '/_authenticated/games/$gameId/my-picks': {
       id: '/_authenticated/games/$gameId/my-picks'
       path: '/my-picks'
@@ -331,6 +351,7 @@ interface AuthenticatedGamesGameIdRouteChildren {
   AuthenticatedGamesGameIdLeaderboardRoute: typeof AuthenticatedGamesGameIdLeaderboardRoute
   AuthenticatedGamesGameIdMatchesRoute: typeof AuthenticatedGamesGameIdMatchesRoute
   AuthenticatedGamesGameIdMyPicksRoute: typeof AuthenticatedGamesGameIdMyPicksRoute
+  AuthenticatedGamesGameIdTournamentRoute: typeof AuthenticatedGamesGameIdTournamentRoute
 }
 
 const AuthenticatedGamesGameIdRouteChildren: AuthenticatedGamesGameIdRouteChildren =
@@ -341,6 +362,8 @@ const AuthenticatedGamesGameIdRouteChildren: AuthenticatedGamesGameIdRouteChildr
       AuthenticatedGamesGameIdLeaderboardRoute,
     AuthenticatedGamesGameIdMatchesRoute: AuthenticatedGamesGameIdMatchesRoute,
     AuthenticatedGamesGameIdMyPicksRoute: AuthenticatedGamesGameIdMyPicksRoute,
+    AuthenticatedGamesGameIdTournamentRoute:
+      AuthenticatedGamesGameIdTournamentRoute,
   }
 
 const AuthenticatedGamesGameIdRouteWithChildren =
