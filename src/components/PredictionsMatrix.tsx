@@ -64,6 +64,8 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
         .from("predictions")
         .select("user_id, match_id, home_score, away_score, points")
         .eq("game_id", gameId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(from, to));
 
       const predMap = new Map<string, PredRow>();

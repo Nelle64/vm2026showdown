@@ -450,6 +450,8 @@ function PredictionStatusSection({ gameId }: { gameId: string }) {
         .from("predictions").select("match_id, user_id")
         .eq("game_id", gameId)
         .in("match_id", matches.map((m: any) => m.id))
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(from, to));
 
       const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p.display_name as string]));

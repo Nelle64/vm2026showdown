@@ -48,7 +48,10 @@ function LeaderboardPage() {
 
       const preds = userIds.length
         ? await fetchAllPages<{ user_id: string; points: number | null }>((from, to) => supabase.from("predictions")
-          .select("user_id, points").eq("game_id", gameId).in("user_id", userIds).range(from, to))
+          .select("user_id, points").eq("game_id", gameId).in("user_id", userIds)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to))
         : [];
       const { data: bonus } = await supabase.from("bonus_answers")
         .select("user_id, points, question:bonus_questions!inner(game_id)").eq("question.game_id", gameId).in("user_id", userIds);
