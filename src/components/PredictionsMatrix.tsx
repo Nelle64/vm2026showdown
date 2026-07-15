@@ -133,7 +133,11 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
                 {data.members.map((mem) => {
                   const p = data.predMap.get(`${mem.user_id}:${m.id}`);
                   if (!locked) {
-                    return <td key={mem.user_id} className="px-2 py-2 text-center text-xs text-muted-foreground">·</td>;
+                    return (
+                      <td key={mem.user_id} className="px-2 py-2 text-center text-xs">
+                        {p ? <span className="text-success" title="Har tippat">✓</span> : <span className="text-muted-foreground">–</span>}
+                      </td>
+                    );
                   }
                   if (!p) {
                     return <td key={mem.user_id} className="px-2 py-2 text-center text-xs text-muted-foreground">–</td>;
