@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { TeamFlag } from "@/components/TeamFlag";
+import { fetchAllPages } from "@/lib/supabase-pagination";
 
 interface MatchRow {
   id: string;
@@ -59,13 +60,14 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
         avatar_url: profMap.get(id)?.avatar_url ?? null,
       })).sort((a, b) => a.display_name.localeCompare(b.display_name, "sv"));
 
-      const { data: preds } = await supabase
+      const preds = await fetchAllPages<PredRow>((from, to) => supabase
         .from("predictions")
         .select("user_id, match_id, home_score, away_score, points")
-        .eq("game_id", gameId);
+        .eq("game_id", gameId)
+        .range(from, to));
 
       const predMap = new Map<string, PredRow>();
-      (preds ?? []).forEach((p: any) => predMap.set(`${p.user_id}:${p.match_id}`, p));
+      preds.forEach((p) => predMap.set(`${p.user_id}:${p.match_id}`, p));
 
       return { matches: (matches ?? []) as unknown as MatchRow[], members: memberRows, predMap };
     },

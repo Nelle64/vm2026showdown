@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Trophy, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PredictionsMatrix } from "@/components/PredictionsMatrix";
+import { fetchAllPages } from "@/lib/supabase-pagination";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/leaderboard")({ component: LeaderboardPage });
 
@@ -17,7 +18,10 @@ function LeaderboardPage() {
   useEffect(() => {
     const channel = supabase.channel(`lb-${gameId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "predictions", filter: `game_id=eq.${gameId}` },
-        () => qc.invalidateQueries({ queryKey: ["leaderboard", gameId] }))
+        () => {
+          qc.invalidateQueries({ queryKey: ["leaderboard", gameId] });
+          qc.invalidateQueries({ queryKey: ["predictions-matrix", gameId] });
+        })
       .on("postgres_changes", { event: "*", schema: "public", table: "bonus_answers" },
         () => qc.invalidateQueries({ queryKey: ["leaderboard", gameId] }))
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" },
@@ -42,8 +46,10 @@ function LeaderboardPage() {
         : { data: [] as any[] };
       const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
-      const { data: preds } = await supabase.from("predictions")
-        .select("user_id, points").eq("game_id", gameId).in("user_id", userIds);
+      const preds = userIds.length
+        ? await fetchAllPages<{ user_id: string; points: number | null }>((from, to) => supabase.from("predictions")
+          .select("user_id, points").eq("game_id", gameId).in("user_id", userIds).range(from, to))
+        : [];
       const { data: bonus } = await supabase.from("bonus_answers")
         .select("user_id, points, question:bonus_questions!inner(game_id)").eq("question.game_id", gameId).in("user_id", userIds);
 
@@ -51,7 +57,7 @@ function LeaderboardPage() {
       const rows: Row[] = (members ?? []).map((m: any) => {
         const prof = profMap.get(m.user_id);
 
-        const myPreds = (preds ?? []).filter((p: any) => p.user_id === m.user_id);
+        const myPreds = preds.filter((p: any) => p.user_id === m.user_id);
         const myBonus = (bonus ?? []).filter((b: any) => b.user_id === m.user_id);
         const scored = myPreds.filter((p: any) => p.points !== null);
         const exact = myPreds.filter((p: any) => p.points === 3).length;
