@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Trash2, UserCheck, RefreshCw, Copy, Plus, X, Check, XCircle } from "lucide-react";
 import { LockSettingsSection } from "@/components/admin/LockSettingsSection";
 import { TeamFlag } from "@/components/TeamFlag";
+import { fetchAllPages } from "@/lib/supabase-pagination";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/admin")({ component: AdminPage });
 
@@ -445,14 +446,17 @@ function PredictionStatusSection({ gameId }: { gameId: string }) {
 
       const { data: profiles } = await supabase
         .from("profiles").select("id, display_name").in("id", memberIds);
-      const { data: preds } = await supabase
+      const preds = await fetchAllPages<{ match_id: string; user_id: string }>((from, to) => supabase
         .from("predictions").select("match_id, user_id")
         .eq("game_id", gameId)
-        .in("match_id", matches.map((m: any) => m.id));
+        .in("match_id", matches.map((m: any) => m.id))
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to));
 
       const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p.display_name as string]));
       const byMatch = new Map<string, Set<string>>();
-      for (const p of preds ?? []) {
+      for (const p of preds) {
         if (!byMatch.has(p.match_id)) byMatch.set(p.match_id, new Set());
         byMatch.get(p.match_id)!.add(p.user_id);
       }
