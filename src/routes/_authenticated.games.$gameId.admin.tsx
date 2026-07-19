@@ -127,7 +127,20 @@ function AdminPage() {
   });
 
   // Bonusfråga
-  type Draft = { question: string; points: number; lockAt: string; answer_type: "text" | "number" | "player" | "team" | "multiple_choice"; options: string[] };
+  type PartKind = "text" | "number";
+  type Part = { key: string; label: string; kind: PartKind; points_exact: number; points_closest: number; margin: number };
+  type AType = "text" | "number" | "player" | "team" | "multiple_choice" | "number_closest" | "composite";
+  type Draft = {
+    question: string;
+    points: number;
+    lockAt: string;
+    answer_type: AType;
+    options: string[];
+    parts: Part[];
+    points_exact: number;
+    points_closest: number;
+    margin: number;
+  };
   const toLocalInput = (d: Date) => {
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -137,21 +150,54 @@ function AdminPage() {
     d.setSeconds(0, 0);
     return toLocalInput(d);
   };
-  const [bq, setBq] = useState<Draft>({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
+  const defaultDraft = (): Draft => ({
+    question: "",
+    points: 5,
+    lockAt: defaultLockAt(),
+    answer_type: "text",
+    options: ["", ""],
+    parts: [
+      { key: "part1", label: "Målskytt", kind: "text", points_exact: 1, points_closest: 0, margin: 0 },
+      { key: "part2", label: "Minut", kind: "number", points_exact: 3, points_closest: 1, margin: 2 },
+    ],
+    points_exact: 3,
+    points_closest: 1,
+    margin: 2,
+  });
+  const [bq, setBq] = useState<Draft>(defaultDraft());
 
   const createBonus = useMutation({
     mutationFn: async () => {
       if (!bq.question.trim()) throw new Error("Ange fråga");
       if (!bq.lockAt) throw new Error("Ange låstid");
       const lockAt = new Date(bq.lockAt).toISOString();
-      const options = bq.answer_type === "multiple_choice"
-        ? bq.options.map((o) => o.trim()).filter(Boolean)
-        : null;
-      if (bq.answer_type === "multiple_choice" && (!options || options.length < 2)) {
-        throw new Error("Ange minst 2 svarsalternativ");
+
+      let options: any = null;
+      let totalPoints = bq.points;
+
+      if (bq.answer_type === "multiple_choice") {
+        const opts = bq.options.map((o) => o.trim()).filter(Boolean);
+        if (opts.length < 2) throw new Error("Ange minst 2 svarsalternativ");
+        options = opts;
+      } else if (bq.answer_type === "number_closest") {
+        if (bq.points_exact <= 0) throw new Error("Exakt-poäng måste vara > 0");
+        options = { points_exact: bq.points_exact, points_closest: bq.points_closest, margin: bq.margin };
+        totalPoints = bq.points_exact;
+      } else if (bq.answer_type === "composite") {
+        if (bq.parts.length < 1) throw new Error("Lägg till minst ett delfält");
+        const parts = bq.parts.map((p, i) => {
+          const key = (p.key || `part${i + 1}`).trim();
+          const label = (p.label || `Del ${i + 1}`).trim();
+          return { key, label, kind: p.kind, points_exact: p.points_exact, points_closest: p.kind === "number" ? p.points_closest : 0, margin: p.kind === "number" ? p.margin : 0 };
+        });
+        const keys = parts.map((p) => p.key);
+        if (new Set(keys).size !== keys.length) throw new Error("Delfält måste ha unika nycklar");
+        options = { parts };
+        totalPoints = parts.reduce((s, p) => s + (p.points_exact || 0), 0);
       }
+
       const { error } = await supabase.from("bonus_questions").insert({
-        game_id: gameId, question: bq.question.trim(), points: bq.points,
+        game_id: gameId, question: bq.question.trim(), points: totalPoints,
         lock_at: lockAt, answer_type: bq.answer_type, options,
         created_by: user!.id,
       });
@@ -159,7 +205,7 @@ function AdminPage() {
     },
     onSuccess: () => {
       toast.success("Fråga skapad");
-      setBq({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
+      setBq(defaultDraft());
       qc.invalidateQueries({ queryKey: ["admin-bonus"] });
       qc.invalidateQueries({ queryKey: ["bonus"] });
     },
@@ -194,14 +240,15 @@ function AdminPage() {
   });
 
   const settle = useMutation({
-    mutationFn: async ({ id, answer }: { id: string; answer: string }) => {
+    mutationFn: async ({ id, correct }: { id: string; correct: Record<string, any> }) => {
       const { error } = await supabase.from("bonus_questions")
-        .update({ status: "settled", correct_answer: { value: answer.trim() } }).eq("id", id);
+        .update({ status: "settled", correct_answer: correct }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Rättad"); qc.invalidateQueries(); },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const copyInvite = () => {
     if (!game?.invite_code) return;
