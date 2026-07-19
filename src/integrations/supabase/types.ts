@@ -517,6 +517,14 @@ export type Database = {
         Args: { p_away: number; p_home: number; r_away: number; r_home: number }
         Returns: number
       }
+      get_bonus_answerers: {
+        Args: { _question_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
