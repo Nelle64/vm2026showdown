@@ -509,6 +509,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_set_bonus_answer_points: {
+        Args: { _answer_id: string; _points: number }
+        Returns: undefined
+      }
       compute_points: {
         Args: { p_away: number; p_home: number; r_away: number; r_home: number }
         Returns: number
