@@ -610,6 +610,82 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
           )}
         </div>
       )}
+
+      {settled && <ManualGradeSection q={q} parts={parts} isComposite={isComposite} />}
+    </div>
+  );
+}
+
+function ManualGradeSection({ q, parts, isComposite }: { q: any; parts: any[]; isComposite: boolean }) {
+  const qc = useQueryClient();
+  const { data: rows } = useQuery({
+    queryKey: ["admin-bonus-answers", q.id],
+    queryFn: async () => {
+      const { data: ans } = await supabase.from("bonus_answers")
+        .select("id, user_id, answer, points").eq("question_id", q.id);
+      const uids = (ans ?? []).map((a) => a.user_id);
+      if (!uids.length) return [];
+      const { data: profs } = await supabase.from("profiles")
+        .select("id, display_name").in("id", uids);
+      const pmap = new Map((profs ?? []).map((p: any) => [p.id, p.display_name]));
+      return (ans ?? []).map((a: any) => ({ ...a, name: pmap.get(a.user_id) ?? "Okänd" }))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name, "sv"));
+    },
+  });
+
+  const save = useMutation({
+    mutationFn: async ({ id, points }: { id: string; points: number }) => {
+      const { error } = await supabase.rpc("admin_set_bonus_answer_points", { _answer_id: id, _points: points });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Poäng uppdaterade");
+      qc.invalidateQueries({ queryKey: ["admin-bonus-answers", q.id] });
+      qc.invalidateQueries({ queryKey: ["bonus-answers"] });
+      qc.invalidateQueries({ queryKey: ["bonus-all-answers"] });
+      qc.invalidateQueries({ queryKey: ["leaderboard"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (!rows?.length) return null;
+
+  const formatAns = (a: any) => {
+    if (isComposite) return parts.map((p) => `${p.label}: ${a.answer?.[p.key] ?? "—"}`).join(" · ");
+    return String(a.answer?.value ?? "—");
+  };
+
+  return (
+    <div className="mt-3 border-t pt-3">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Manuell rättning
+      </div>
+      <div className="space-y-1.5">
+        {rows.map((a: any) => (
+          <ManualGradeRow key={a.id} a={a} formatted={formatAns(a)} maxPoints={q.points}
+            onSave={(pts) => save.mutate({ id: a.id, points: pts })} pending={save.isPending} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ManualGradeRow({ a, formatted, maxPoints, onSave, pending }: {
+  a: any; formatted: string; maxPoints: number; onSave: (p: number) => void; pending: boolean;
+}) {
+  const [pts, setPts] = useState<string>(a.points != null ? String(a.points) : "0");
+  const dirty = String(a.points ?? 0) !== pts;
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="w-28 shrink-0 truncate text-muted-foreground">{a.name}</span>
+      <span className="min-w-0 flex-1 truncate">{formatted}</span>
+      <input type="number" min={0} max={maxPoints} value={pts} onChange={(e) => setPts(e.target.value)}
+        className="h-8 w-16 rounded-md border bg-background px-2 text-center text-sm tabular-nums" />
+      <Button size="sm" variant={dirty ? "default" : "outline"} disabled={pending || !dirty || pts === ""}
+        onClick={() => onSave(parseInt(pts, 10))}
+        className={dirty ? "bg-gold text-gold-foreground hover:bg-gold/90" : ""}>
+        Spara
+      </Button>
     </div>
   );
 }
