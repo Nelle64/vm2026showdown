@@ -127,13 +127,23 @@ function AdminPage() {
   });
 
   // Bonusfråga
-  type Draft = { question: string; points: number; lockHours: number; answer_type: "text" | "number" | "player" | "team" | "multiple_choice"; options: string[] };
-  const [bq, setBq] = useState<Draft>({ question: "", points: 5, lockHours: 24, answer_type: "text", options: ["", ""] });
+  type Draft = { question: string; points: number; lockAt: string; answer_type: "text" | "number" | "player" | "team" | "multiple_choice"; options: string[] };
+  const toLocalInput = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const defaultLockAt = () => {
+    const d = new Date(Date.now() + 24 * 3600_000);
+    d.setSeconds(0, 0);
+    return toLocalInput(d);
+  };
+  const [bq, setBq] = useState<Draft>({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
 
   const createBonus = useMutation({
     mutationFn: async () => {
       if (!bq.question.trim()) throw new Error("Ange fråga");
-      const lockAt = new Date(Date.now() + bq.lockHours * 3600_000).toISOString();
+      if (!bq.lockAt) throw new Error("Ange låstid");
+      const lockAt = new Date(bq.lockAt).toISOString();
       const options = bq.answer_type === "multiple_choice"
         ? bq.options.map((o) => o.trim()).filter(Boolean)
         : null;
@@ -149,7 +159,34 @@ function AdminPage() {
     },
     onSuccess: () => {
       toast.success("Fråga skapad");
-      setBq({ question: "", points: 5, lockHours: 24, answer_type: "text", options: ["", ""] });
+      setBq({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
+      qc.invalidateQueries({ queryKey: ["admin-bonus"] });
+      qc.invalidateQueries({ queryKey: ["bonus"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateLockAt = useMutation({
+    mutationFn: async ({ id, lockAt }: { id: string; lockAt: string }) => {
+      const { error } = await supabase.from("bonus_questions")
+        .update({ lock_at: new Date(lockAt).toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Låstid uppdaterad");
+      qc.invalidateQueries({ queryKey: ["admin-bonus"] });
+      qc.invalidateQueries({ queryKey: ["bonus"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteBonus = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("bonus_questions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Fråga borttagen");
       qc.invalidateQueries({ queryKey: ["admin-bonus"] });
       qc.invalidateQueries({ queryKey: ["bonus"] });
     },
