@@ -532,12 +532,13 @@ function AdminPage() {
   );
 }
 
-function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
+function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCount }: {
   q: any;
   onSettle: (correct: Record<string, any>) => void;
   onUpdateLock: (iso: string) => void;
   onDelete: () => void;
   toLocalInput: (d: Date) => string;
+  answerCount: number;
 }) {
   const isComposite = q.answer_type === "composite";
   const parts: any[] = isComposite ? (q.options?.parts ?? []) : [];
