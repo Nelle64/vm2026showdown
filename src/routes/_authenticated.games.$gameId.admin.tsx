@@ -314,7 +314,7 @@ function AdminPage() {
         <div className="space-y-2 rounded-xl border bg-card p-4">
           <input value={bq.question} onChange={(e) => setBq({ ...bq, question: e.target.value })}
             placeholder="ex. Vem gör flest mål i turneringen?" className="h-11 w-full rounded-md border bg-background px-3" />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <select value={bq.answer_type} onChange={(e) => setBq({ ...bq, answer_type: e.target.value as Draft["answer_type"] })}
               className="h-11 rounded-md border bg-background px-2">
               <option value="text">Fritext</option>
@@ -325,8 +325,12 @@ function AdminPage() {
             </select>
             <input type="number" min={1} max={100} value={bq.points} onChange={(e) => setBq({ ...bq, points: +e.target.value })}
               placeholder="Poäng" className="h-11 rounded-md border bg-background px-3" />
-            <input type="number" min={1} value={bq.lockHours} onChange={(e) => setBq({ ...bq, lockHours: +e.target.value })}
-              placeholder="Lås om (h)" className="h-11 rounded-md border bg-background px-3" />
+            <label className="col-span-2 flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground sm:col-span-1">
+              Stänger
+              <input type="datetime-local" value={bq.lockAt} onChange={(e) => setBq({ ...bq, lockAt: e.target.value })}
+                className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground" />
+            </label>
+          </div>
           </div>
 
           {bq.answer_type === "multiple_choice" && (
