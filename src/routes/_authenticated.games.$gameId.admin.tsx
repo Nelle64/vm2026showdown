@@ -90,6 +90,20 @@ function AdminPage() {
     },
   });
 
+  const { data: answerCounts } = useQuery({
+    queryKey: ["admin-bonus-answer-counts", gameId],
+    queryFn: async () => {
+      const ids = questions?.map((q) => q.id) ?? [];
+      if (!ids.length) return new Map<string, number>();
+      const { data, error } = await supabase.from("bonus_answers").select("question_id, user_id").in("question_id", ids);
+      if (error) throw error;
+      const map = new Map<string, number>();
+      (data ?? []).forEach((a) => map.set(a.question_id, (map.get(a.question_id) ?? 0) + 1));
+      return map;
+    },
+    enabled: !!questions?.length,
+  });
+
   const removeMember = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("game_members").delete().eq("id", id);
@@ -505,6 +519,7 @@ function AdminPage() {
           {questions?.map((q: any) => (
             <SettleRow key={q.id} q={q}
               toLocalInput={toLocalInput}
+              answerCount={answerCounts?.get(q.id) ?? 0}
               onSettle={(correct) => settle.mutate({ id: q.id, correct })}
               onUpdateLock={(iso) => updateLockAt.mutate({ id: q.id, lockAt: iso })}
               onDelete={() => { if (confirm("Ta bort bonusfrågan?")) deleteBonus.mutate(q.id); }}
@@ -517,12 +532,13 @@ function AdminPage() {
   );
 }
 
-function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
+function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCount }: {
   q: any;
   onSettle: (correct: Record<string, any>) => void;
   onUpdateLock: (iso: string) => void;
   onDelete: () => void;
   toLocalInput: (d: Date) => string;
+  answerCount: number;
 }) {
   const isComposite = q.answer_type === "composite";
   const parts: any[] = isComposite ? (q.options?.parts ?? []) : [];
@@ -555,8 +571,9 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate font-medium">{q.question}</div>
-          <div className="text-xs text-muted-foreground">
-            {settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span>{settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}</span>
+            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">{answerCount} svar</span>
           </div>
         </div>
         <Button size="icon" variant="ghost" onClick={onDelete} title="Ta bort">
