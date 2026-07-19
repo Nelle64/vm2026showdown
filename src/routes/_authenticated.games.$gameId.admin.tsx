@@ -90,6 +90,20 @@ function AdminPage() {
     },
   });
 
+  const { data: answerCounts } = useQuery({
+    queryKey: ["admin-bonus-answer-counts", gameId],
+    queryFn: async () => {
+      const ids = questions?.map((q) => q.id) ?? [];
+      if (!ids.length) return new Map<string, number>();
+      const { data, error } = await supabase.from("bonus_answers").select("question_id, user_id").in("question_id", ids);
+      if (error) throw error;
+      const map = new Map<string, number>();
+      (data ?? []).forEach((a) => map.set(a.question_id, (map.get(a.question_id) ?? 0) + 1));
+      return map;
+    },
+    enabled: !!questions?.length,
+  });
+
   const removeMember = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("game_members").delete().eq("id", id);
