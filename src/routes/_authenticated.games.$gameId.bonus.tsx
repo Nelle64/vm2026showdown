@@ -96,6 +96,16 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const { data: answerers } = useQuery({
+    queryKey: ["bonus-answerers", q.id],
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_bonus_answerers", { _question_id: q.id });
+      if (error) throw error;
+      return (data ?? []) as { user_id: string; display_name: string | null; avatar_url: string | null }[];
+    },
+  });
+
   const { data: allAnswers } = useQuery({
     queryKey: ["bonus-all-answers", q.id, gameId],
     enabled: locked,
