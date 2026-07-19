@@ -331,7 +331,8 @@ function AdminPage() {
                 className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground" />
             </label>
           </div>
-          </div>
+
+
 
           {bq.answer_type === "multiple_choice" && (
             <div className="space-y-2 rounded-md border border-dashed p-3">
