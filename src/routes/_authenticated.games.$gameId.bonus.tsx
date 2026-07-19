@@ -58,16 +58,37 @@ function BonusPage() {
 
 function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: string; answer: any; onAnswered: () => void }) {
   const { user } = useAuth();
-  const [value, setValue] = useState<string>(answer?.answer?.value ?? "");
+  const isComposite = q.answer_type === "composite";
+  const parts: any[] = isComposite ? (q.options?.parts ?? []) : [];
+  const isMC = q.answer_type === "multiple_choice" && Array.isArray(q.options);
+
+  const [value, setValue] = useState<string>(answer?.answer?.value != null ? String(answer.answer.value) : "");
+  const [compVals, setCompVals] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    parts.forEach((p) => { init[p.key] = answer?.answer?.[p.key] != null ? String(answer.answer[p.key]) : ""; });
+    return init;
+  });
+
   const locked = q.status !== "open" || new Date(q.lock_at).getTime() <= Date.now();
   const settled = q.status === "settled";
-  const isMC = q.answer_type === "multiple_choice" && Array.isArray(q.options);
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!value.trim()) throw new Error("Ange ett svar");
+      let payload: Record<string, any>;
+      if (isComposite) {
+        payload = {};
+        for (const p of parts) {
+          const v = (compVals[p.key] ?? "").trim();
+          if (!v) throw new Error(`Fyll i ${p.label}`);
+          payload[p.key] = p.kind === "number" ? Number(v) : v;
+        }
+      } else {
+        if (!value.trim()) throw new Error("Ange ett svar");
+        const isNum = q.answer_type === "number" || q.answer_type === "number_closest";
+        payload = { value: isNum ? Number(value) : value.trim() };
+      }
       const { error } = await supabase.from("bonus_answers").upsert({
-        question_id: q.id, user_id: user!.id, answer: { value: value.trim() },
+        question_id: q.id, user_id: user!.id, answer: payload,
       }, { onConflict: "question_id,user_id" });
       if (error) throw error;
     },
@@ -90,11 +111,27 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
         user_id: a.user_id,
         name: pmap.get(a.user_id)?.display_name ?? "Okänd",
         avatar: pmap.get(a.user_id)?.avatar_url ?? null,
-        value: a.answer?.value ?? "—",
+        answer: a.answer ?? {},
         points: a.points,
       }));
     },
   });
+
+  const formatOwn = () => {
+    if (!answer?.answer) return "—";
+    if (isComposite) {
+      return parts.map((p) => `${p.label}: ${answer.answer[p.key] ?? "—"}`).join(" · ");
+    }
+    return answer.answer.value ?? "—";
+  };
+
+  const formatCorrect = () => {
+    if (!q.correct_answer) return "";
+    if (isComposite) {
+      return parts.map((p) => `${p.label}: ${q.correct_answer[p.key] ?? "—"}`).join(" · ");
+    }
+    return q.correct_answer.value ?? JSON.stringify(q.correct_answer);
+  };
 
   return (
     <div className="rounded-xl border bg-card p-4">
@@ -106,10 +143,21 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
         {settled ? "Avgjord" : locked ? "Låst" : `Stänger om ${formatDistanceToNowStrict(new Date(q.lock_at), { locale: sv })}`}
       </div>
 
+      {isComposite && !locked && (
+        <div className="mt-2 text-[11px] text-muted-foreground">
+          Poäng: {parts.map((p) => `${p.label} ${p.points_exact}p${p.kind === "number" && p.points_closest ? ` (±${p.margin}: ${p.points_closest}p)` : ""}`).join(" · ")}
+        </div>
+      )}
+      {q.answer_type === "number_closest" && !locked && q.options && (
+        <div className="mt-2 text-[11px] text-muted-foreground">
+          Exakt: {q.options.points_exact}p · ±{q.options.margin}: {q.options.points_closest}p
+        </div>
+      )}
+
       {settled && q.correct_answer && (
         <div className="mt-3 rounded-md bg-muted/50 p-2 text-sm">
           <span className="text-muted-foreground">Rätt svar: </span>
-          <span className="font-semibold">{q.correct_answer.value ?? JSON.stringify(q.correct_answer)}</span>
+          <span className="font-semibold">{formatCorrect()}</span>
         </div>
       )}
 
@@ -117,10 +165,26 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
         {locked ? (
           <div className="text-sm">
             <span className="text-muted-foreground">Ditt svar: </span>
-            <span className="font-semibold">{answer?.answer?.value ?? "—"}</span>
+            <span className="font-semibold">{formatOwn()}</span>
             {answer?.points != null && (
               <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-xs font-bold text-gold">+{answer.points} p</span>
             )}
+          </div>
+        ) : isComposite ? (
+          <div className="space-y-2">
+            {parts.map((p) => (
+              <div key={p.key} className="flex items-center gap-2">
+                <div className="w-24 shrink-0 truncate text-xs text-muted-foreground">{p.label}</div>
+                <input type={p.kind === "number" ? "number" : "text"}
+                  value={compVals[p.key] ?? ""}
+                  onChange={(e) => setCompVals({ ...compVals, [p.key]: e.target.value })}
+                  placeholder="Ditt svar"
+                  className="h-10 flex-1 rounded-md border bg-background px-3" />
+              </div>
+            ))}
+            <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
+              Spara
+            </Button>
           </div>
         ) : isMC ? (
           <div className="space-y-2">
@@ -139,7 +203,7 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
         ) : (
           <div className="flex gap-2">
             <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Ditt svar"
-              type={q.answer_type === "number" ? "number" : "text"}
+              type={q.answer_type === "number" || q.answer_type === "number_closest" ? "number" : "text"}
               className="h-10 flex-1 rounded-md border bg-background px-3" />
             <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
               Spara
@@ -155,7 +219,9 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
           </div>
           <div className="space-y-1.5">
             {allAnswers.map((a) => {
-              const correct = settled && q.correct_answer && String(a.value) === String(q.correct_answer.value);
+              const display = isComposite
+                ? parts.map((p) => `${a.answer[p.key] ?? "—"}`).join(" · ")
+                : (a.answer?.value ?? "—");
               return (
                 <div key={a.user_id} className="flex items-center gap-2 text-sm">
                   <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-muted">
@@ -168,7 +234,7 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
                     )}
                   </div>
                   <span className="min-w-0 flex-1 truncate text-muted-foreground">{a.name}</span>
-                  <span className={"font-semibold " + (correct ? "text-gold" : "")}>{a.value}</span>
+                  <span className="font-semibold">{String(display)}</span>
                   {a.points != null && a.points > 0 && (
                     <span className="rounded-full bg-gold/20 px-1.5 py-0.5 text-[10px] font-bold text-gold">+{a.points}</span>
                   )}
@@ -181,4 +247,3 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
     </div>
   );
 }
-

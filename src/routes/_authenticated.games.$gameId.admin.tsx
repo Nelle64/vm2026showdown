@@ -127,7 +127,20 @@ function AdminPage() {
   });
 
   // Bonusfråga
-  type Draft = { question: string; points: number; lockAt: string; answer_type: "text" | "number" | "player" | "team" | "multiple_choice"; options: string[] };
+  type PartKind = "text" | "number";
+  type Part = { key: string; label: string; kind: PartKind; points_exact: number; points_closest: number; margin: number };
+  type AType = "text" | "number" | "player" | "team" | "multiple_choice" | "number_closest" | "composite";
+  type Draft = {
+    question: string;
+    points: number;
+    lockAt: string;
+    answer_type: AType;
+    options: string[];
+    parts: Part[];
+    points_exact: number;
+    points_closest: number;
+    margin: number;
+  };
   const toLocalInput = (d: Date) => {
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -137,21 +150,54 @@ function AdminPage() {
     d.setSeconds(0, 0);
     return toLocalInput(d);
   };
-  const [bq, setBq] = useState<Draft>({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
+  const defaultDraft = (): Draft => ({
+    question: "",
+    points: 5,
+    lockAt: defaultLockAt(),
+    answer_type: "text",
+    options: ["", ""],
+    parts: [
+      { key: "part1", label: "Målskytt", kind: "text", points_exact: 1, points_closest: 0, margin: 0 },
+      { key: "part2", label: "Minut", kind: "number", points_exact: 3, points_closest: 1, margin: 2 },
+    ],
+    points_exact: 3,
+    points_closest: 1,
+    margin: 2,
+  });
+  const [bq, setBq] = useState<Draft>(defaultDraft());
 
   const createBonus = useMutation({
     mutationFn: async () => {
       if (!bq.question.trim()) throw new Error("Ange fråga");
       if (!bq.lockAt) throw new Error("Ange låstid");
       const lockAt = new Date(bq.lockAt).toISOString();
-      const options = bq.answer_type === "multiple_choice"
-        ? bq.options.map((o) => o.trim()).filter(Boolean)
-        : null;
-      if (bq.answer_type === "multiple_choice" && (!options || options.length < 2)) {
-        throw new Error("Ange minst 2 svarsalternativ");
+
+      let options: any = null;
+      let totalPoints = bq.points;
+
+      if (bq.answer_type === "multiple_choice") {
+        const opts = bq.options.map((o) => o.trim()).filter(Boolean);
+        if (opts.length < 2) throw new Error("Ange minst 2 svarsalternativ");
+        options = opts;
+      } else if (bq.answer_type === "number_closest") {
+        if (bq.points_exact <= 0) throw new Error("Exakt-poäng måste vara > 0");
+        options = { points_exact: bq.points_exact, points_closest: bq.points_closest, margin: bq.margin };
+        totalPoints = bq.points_exact;
+      } else if (bq.answer_type === "composite") {
+        if (bq.parts.length < 1) throw new Error("Lägg till minst ett delfält");
+        const parts = bq.parts.map((p, i) => {
+          const key = (p.key || `part${i + 1}`).trim();
+          const label = (p.label || `Del ${i + 1}`).trim();
+          return { key, label, kind: p.kind, points_exact: p.points_exact, points_closest: p.kind === "number" ? p.points_closest : 0, margin: p.kind === "number" ? p.margin : 0 };
+        });
+        const keys = parts.map((p) => p.key);
+        if (new Set(keys).size !== keys.length) throw new Error("Delfält måste ha unika nycklar");
+        options = { parts };
+        totalPoints = parts.reduce((s, p) => s + (p.points_exact || 0), 0);
       }
+
       const { error } = await supabase.from("bonus_questions").insert({
-        game_id: gameId, question: bq.question.trim(), points: bq.points,
+        game_id: gameId, question: bq.question.trim(), points: totalPoints,
         lock_at: lockAt, answer_type: bq.answer_type, options,
         created_by: user!.id,
       });
@@ -159,7 +205,7 @@ function AdminPage() {
     },
     onSuccess: () => {
       toast.success("Fråga skapad");
-      setBq({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
+      setBq(defaultDraft());
       qc.invalidateQueries({ queryKey: ["admin-bonus"] });
       qc.invalidateQueries({ queryKey: ["bonus"] });
     },
@@ -194,14 +240,15 @@ function AdminPage() {
   });
 
   const settle = useMutation({
-    mutationFn: async ({ id, answer }: { id: string; answer: string }) => {
+    mutationFn: async ({ id, correct }: { id: string; correct: Record<string, any> }) => {
       const { error } = await supabase.from("bonus_questions")
-        .update({ status: "settled", correct_answer: { value: answer.trim() } }).eq("id", id);
+        .update({ status: "settled", correct_answer: correct }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Rättad"); qc.invalidateQueries(); },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const copyInvite = () => {
     if (!game?.invite_code) return;
@@ -311,28 +358,37 @@ function AdminPage() {
 
       <section>
         <h2 className="mb-3 font-semibold">Skapa bonusfråga</h2>
-        <div className="space-y-2 rounded-xl border bg-card p-4">
+        <div className="space-y-3 rounded-xl border bg-card p-4">
           <input value={bq.question} onChange={(e) => setBq({ ...bq, question: e.target.value })}
-            placeholder="ex. Vem gör flest mål i turneringen?" className="h-11 w-full rounded-md border bg-background px-3" />
+            placeholder="ex. Vem gör första målet och i vilken minut?" className="h-11 w-full rounded-md border bg-background px-3" />
+
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <select value={bq.answer_type} onChange={(e) => setBq({ ...bq, answer_type: e.target.value as Draft["answer_type"] })}
-              className="h-11 rounded-md border bg-background px-2">
-              <option value="text">Fritext</option>
-              <option value="number">Antal</option>
-              <option value="player">Spelare</option>
-              <option value="team">Lag</option>
-              <option value="multiple_choice">Flerval</option>
-            </select>
-            <input type="number" min={1} max={100} value={bq.points} onChange={(e) => setBq({ ...bq, points: +e.target.value })}
-              placeholder="Poäng" className="h-11 rounded-md border bg-background px-3" />
-            <label className="col-span-2 flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground sm:col-span-1">
+            <label className="flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground">
+              Typ
+              <select value={bq.answer_type} onChange={(e) => setBq({ ...bq, answer_type: e.target.value as Draft["answer_type"] })}
+                className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground">
+                <option value="text">Fritext</option>
+                <option value="number">Antal (exakt)</option>
+                <option value="number_closest">Antal (med närmast)</option>
+                <option value="player">Spelare</option>
+                <option value="team">Lag</option>
+                <option value="multiple_choice">Flerval</option>
+                <option value="composite">Sammansatt (flera delfält)</option>
+              </select>
+            </label>
+            {bq.answer_type !== "composite" && bq.answer_type !== "number_closest" && (
+              <label className="flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground">
+                Poäng
+                <input type="number" min={1} max={100} value={bq.points} onChange={(e) => setBq({ ...bq, points: +e.target.value })}
+                  className="mt-1 h-11 rounded-md border bg-background px-3 text-sm text-foreground normal-case tracking-normal" />
+              </label>
+            )}
+            <label className="flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground">
               Stänger
               <input type="datetime-local" value={bq.lockAt} onChange={(e) => setBq({ ...bq, lockAt: e.target.value })}
                 className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground" />
             </label>
           </div>
-
-
 
           {bq.answer_type === "multiple_choice" && (
             <div className="space-y-2 rounded-md border border-dashed p-3">
@@ -355,6 +411,88 @@ function AdminPage() {
             </div>
           )}
 
+          {bq.answer_type === "number_closest" && (
+            <div className="grid grid-cols-3 gap-2 rounded-md border border-dashed p-3">
+              <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+                Exakt-poäng
+                <input type="number" min={0} value={bq.points_exact}
+                  onChange={(e) => setBq({ ...bq, points_exact: +e.target.value })}
+                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+              </label>
+              <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+                Närmast-poäng
+                <input type="number" min={0} value={bq.points_closest}
+                  onChange={(e) => setBq({ ...bq, points_closest: +e.target.value })}
+                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+              </label>
+              <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+                Marginal (±)
+                <input type="number" min={0} step="0.5" value={bq.margin}
+                  onChange={(e) => setBq({ ...bq, margin: +e.target.value })}
+                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+              </label>
+            </div>
+          )}
+
+          {bq.answer_type === "composite" && (
+            <div className="space-y-2 rounded-md border border-dashed p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delfält</div>
+                <div className="text-[10px] text-muted-foreground">Total: {bq.parts.reduce((s, p) => s + (p.points_exact || 0), 0)} p</div>
+              </div>
+              {bq.parts.map((p, i) => (
+                <div key={i} className="space-y-2 rounded-md border bg-background/50 p-2">
+                  <div className="flex gap-2">
+                    <input value={p.label}
+                      onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, label: e.target.value }; setBq({ ...bq, parts: next }); }}
+                      placeholder={`Etikett (t.ex. Målskytt)`} className="h-9 flex-1 rounded-md border bg-background px-2 text-sm" />
+                    <select value={p.kind}
+                      onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, kind: e.target.value as PartKind }; setBq({ ...bq, parts: next }); }}
+                      className="h-9 rounded-md border bg-background px-2 text-sm">
+                      <option value="text">Text</option>
+                      <option value="number">Antal</option>
+                    </select>
+                    {bq.parts.length > 1 && (
+                      <Button size="icon" variant="ghost" onClick={() => setBq({ ...bq, parts: bq.parts.filter((_, j) => j !== i) })}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Exakt-p
+                      <input type="number" min={0} value={p.points_exact}
+                        onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, points_exact: +e.target.value }; setBq({ ...bq, parts: next }); }}
+                        className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                    </label>
+                    {p.kind === "number" && (
+                      <>
+                        <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Närmast-p
+                          <input type="number" min={0} value={p.points_closest}
+                            onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, points_closest: +e.target.value }; setBq({ ...bq, parts: next }); }}
+                            className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                        </label>
+                        <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Marginal
+                          <input type="number" min={0} step="0.5" value={p.margin}
+                            onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, margin: +e.target.value }; setBq({ ...bq, parts: next }); }}
+                            className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                        </label>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <Button size="sm" variant="outline" onClick={() => setBq({
+                ...bq,
+                parts: [...bq.parts, { key: `part${bq.parts.length + 1}`, label: "", kind: "text", points_exact: 1, points_closest: 0, margin: 0 }],
+              })}>
+                <Plus className="mr-1 h-3 w-3" /> Lägg till delfält
+              </Button>
+            </div>
+          )}
+
           <Button onClick={() => createBonus.mutate()} disabled={createBonus.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
             Skapa
           </Button>
@@ -367,7 +505,7 @@ function AdminPage() {
           {questions?.map((q: any) => (
             <SettleRow key={q.id} q={q}
               toLocalInput={toLocalInput}
-              onSettle={(ans) => settle.mutate({ id: q.id, answer: ans })}
+              onSettle={(correct) => settle.mutate({ id: q.id, correct })}
               onUpdateLock={(iso) => updateLockAt.mutate({ id: q.id, lockAt: iso })}
               onDelete={() => { if (confirm("Ta bort bonusfrågan?")) deleteBonus.mutate(q.id); }}
             />
@@ -381,16 +519,37 @@ function AdminPage() {
 
 function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
   q: any;
-  onSettle: (ans: string) => void;
+  onSettle: (correct: Record<string, any>) => void;
   onUpdateLock: (iso: string) => void;
   onDelete: () => void;
   toLocalInput: (d: Date) => string;
 }) {
-  const [ans, setAns] = useState(q.correct_answer?.value ?? "");
+  const isComposite = q.answer_type === "composite";
+  const parts: any[] = isComposite ? (q.options?.parts ?? []) : [];
+  const [ans, setAns] = useState<string>(q.correct_answer?.value ?? "");
+  const [compAns, setCompAns] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    parts.forEach((p) => { init[p.key] = q.correct_answer?.[p.key] ?? ""; });
+    return init;
+  });
   const [lockLocal, setLockLocal] = useState(() => toLocalInput(new Date(q.lock_at)));
   const isMC = q.answer_type === "multiple_choice" && Array.isArray(q.options);
   const settled = q.status === "settled";
   const locked = !settled && new Date(q.lock_at).getTime() <= Date.now();
+
+  const submit = () => {
+    if (isComposite) {
+      const out: Record<string, any> = {};
+      parts.forEach((p) => {
+        const v = (compAns[p.key] ?? "").trim();
+        out[p.key] = p.kind === "number" ? (v === "" ? null : Number(v)) : v;
+      });
+      onSettle(out);
+    } else {
+      onSettle({ value: ans.trim() });
+    }
+  };
+
   return (
     <div className="rounded-lg border bg-card p-3">
       <div className="flex items-start justify-between gap-3">
@@ -419,22 +578,42 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
       )}
 
       {!settled && (
-        <div className="mt-2 flex gap-2">
-          {isMC ? (
-            <select value={ans} onChange={(e) => setAns(e.target.value)} className="h-9 flex-1 rounded-md border bg-background px-2 text-sm">
-              <option value="">Välj rätt svar</option>
-              {q.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
-            </select>
+        <div className="mt-2 space-y-2">
+          {isComposite ? (
+            <>
+              {parts.map((p) => (
+                <div key={p.key} className="flex items-center gap-2">
+                  <div className="w-28 shrink-0 truncate text-xs text-muted-foreground">{p.label}</div>
+                  <input type={p.kind === "number" ? "number" : "text"}
+                    value={compAns[p.key] ?? ""}
+                    onChange={(e) => setCompAns({ ...compAns, [p.key]: e.target.value })}
+                    placeholder="Rätt svar"
+                    className="h-9 flex-1 rounded-md border bg-background px-3 text-sm" />
+                </div>
+              ))}
+              <Button size="sm" onClick={submit} className="bg-gold text-gold-foreground hover:bg-gold/90">Rätta</Button>
+            </>
           ) : (
-            <input value={ans} onChange={(e) => setAns(e.target.value)} placeholder="Rätt svar"
-              className="h-9 flex-1 rounded-md border bg-background px-3 text-sm" />
+            <div className="flex gap-2">
+              {isMC ? (
+                <select value={ans} onChange={(e) => setAns(e.target.value)} className="h-9 flex-1 rounded-md border bg-background px-2 text-sm">
+                  <option value="">Välj rätt svar</option>
+                  {q.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input type={q.answer_type === "number" || q.answer_type === "number_closest" ? "number" : "text"}
+                  value={ans} onChange={(e) => setAns(e.target.value)} placeholder="Rätt svar"
+                  className="h-9 flex-1 rounded-md border bg-background px-3 text-sm" />
+              )}
+              <Button size="sm" onClick={submit} className="bg-gold text-gold-foreground hover:bg-gold/90">Rätta</Button>
+            </div>
           )}
-          <Button size="sm" onClick={() => onSettle(ans)} className="bg-gold text-gold-foreground hover:bg-gold/90">Rätta</Button>
         </div>
       )}
     </div>
   );
 }
+
 
 
 function ResultsSection() {
