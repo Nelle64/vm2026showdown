@@ -50,13 +50,13 @@ function BonusPage() {
         </div>
       )}
       {questions?.map((q) => (
-        <BonusQuestionCard key={q.id} q={q} answer={myAnswers?.get(q.id)} onAnswered={() => qc.invalidateQueries({ queryKey: ["bonus-answers", gameId] })} />
+        <BonusQuestionCard key={q.id} q={q} gameId={gameId} answer={myAnswers?.get(q.id)} onAnswered={() => qc.invalidateQueries({ queryKey: ["bonus-answers", gameId] })} />
       ))}
     </div>
   );
 }
 
-function BonusQuestionCard({ q, answer, onAnswered }: { q: any; answer: any; onAnswered: () => void }) {
+function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: string; answer: any; onAnswered: () => void }) {
   const { user } = useAuth();
   const [value, setValue] = useState<string>(answer?.answer?.value ?? "");
   const locked = q.status !== "open" || new Date(q.lock_at).getTime() <= Date.now();
@@ -73,6 +73,27 @@ function BonusQuestionCard({ q, answer, onAnswered }: { q: any; answer: any; onA
     },
     onSuccess: () => { toast.success("Svar sparat"); onAnswered(); },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const { data: allAnswers } = useQuery({
+    queryKey: ["bonus-all-answers", q.id, gameId],
+    enabled: locked,
+    queryFn: async () => {
+      const { data: ans } = await supabase.from("bonus_answers")
+        .select("user_id, answer, points").eq("question_id", q.id);
+      const uids = (ans ?? []).map((a) => a.user_id);
+      if (!uids.length) return [];
+      const { data: profs } = await supabase.from("profiles")
+        .select("id, display_name, avatar_url").in("id", uids);
+      const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+      return (ans ?? []).map((a: any) => ({
+        user_id: a.user_id,
+        name: pmap.get(a.user_id)?.display_name ?? "Okänd",
+        avatar: pmap.get(a.user_id)?.avatar_url ?? null,
+        value: a.answer?.value ?? "—",
+        points: a.points,
+      }));
+    },
   });
 
   return (
@@ -126,6 +147,38 @@ function BonusQuestionCard({ q, answer, onAnswered }: { q: any; answer: any; onA
           </div>
         )}
       </div>
+
+      {locked && allAnswers && allAnswers.length > 0 && (
+        <div className="mt-4 border-t pt-3">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Allas svar ({allAnswers.length})
+          </div>
+          <div className="space-y-1.5">
+            {allAnswers.map((a) => {
+              const correct = settled && q.correct_answer && String(a.value) === String(q.correct_answer.value);
+              return (
+                <div key={a.user_id} className="flex items-center gap-2 text-sm">
+                  <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-muted">
+                    {a.avatar ? (
+                      <img src={a.avatar} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[9px] font-bold text-muted-foreground">
+                        {a.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">{a.name}</span>
+                  <span className={"font-semibold " + (correct ? "text-gold" : "")}>{a.value}</span>
+                  {a.points != null && a.points > 0 && (
+                    <span className="rounded-full bg-gold/20 px-1.5 py-0.5 text-[10px] font-bold text-gold">+{a.points}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
