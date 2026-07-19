@@ -555,6 +555,8 @@ export type Database = {
         | "team"
         | "player"
         | "multiple_choice"
+        | "number_closest"
+        | "composite"
       game_lock_mode: "per_match" | "per_round"
       join_request_status: "pending" | "approved" | "rejected"
       match_status:
@@ -700,6 +702,8 @@ export const Constants = {
         "team",
         "player",
         "multiple_choice",
+        "number_closest",
+        "composite",
       ],
       game_lock_mode: ["per_match", "per_round"],
       join_request_status: ["pending", "approved", "rejected"],
