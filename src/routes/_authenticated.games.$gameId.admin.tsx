@@ -519,6 +519,7 @@ function AdminPage() {
           {questions?.map((q: any) => (
             <SettleRow key={q.id} q={q}
               toLocalInput={toLocalInput}
+              answerCount={answerCounts?.get(q.id) ?? 0}
               onSettle={(correct) => settle.mutate({ id: q.id, correct })}
               onUpdateLock={(iso) => updateLockAt.mutate({ id: q.id, lockAt: iso })}
               onDelete={() => { if (confirm("Ta bort bonusfrågan?")) deleteBonus.mutate(q.id); }}
