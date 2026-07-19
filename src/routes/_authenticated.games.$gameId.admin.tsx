@@ -362,9 +362,16 @@ function AdminPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 font-semibold">Rätta bonusfrågor</h2>
+        <h2 className="mb-3 font-semibold">Hantera bonusfrågor</h2>
         <div className="space-y-2">
-          {questions?.map((q: any) => <SettleRow key={q.id} q={q} onSettle={(ans) => settle.mutate({ id: q.id, answer: ans })} />)}
+          {questions?.map((q: any) => (
+            <SettleRow key={q.id} q={q}
+              toLocalInput={toLocalInput}
+              onSettle={(ans) => settle.mutate({ id: q.id, answer: ans })}
+              onUpdateLock={(iso) => updateLockAt.mutate({ id: q.id, lockAt: iso })}
+              onDelete={() => { if (confirm("Ta bort bonusfrågan?")) deleteBonus.mutate(q.id); }}
+            />
+          ))}
           {!questions?.length && <div className="text-sm text-muted-foreground">Inga frågor ännu.</div>}
         </div>
       </section>
