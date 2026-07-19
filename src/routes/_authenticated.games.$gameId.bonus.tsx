@@ -222,6 +222,30 @@ function BonusQuestionCard({ q, gameId, answer, onAnswered }: { q: any; gameId: 
         )}
       </div>
 
+      {!locked && answerers && answerers.length > 0 && (
+        <div className="mt-4 border-t pt-3">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Har svarat ({answerers.length})
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {answerers.map((a) => (
+              <div key={a.user_id} className="flex items-center gap-1.5 rounded-full bg-muted/60 py-0.5 pl-0.5 pr-2">
+                <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full bg-muted">
+                  {a.avatar_url ? (
+                    <img src={a.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[8px] font-bold text-muted-foreground">
+                      {(a.display_name ?? "??").slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs">{a.display_name ?? "Okänd"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {locked && allAnswers && allAnswers.length > 0 && (
         <div className="mt-4 border-t pt-3">
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
