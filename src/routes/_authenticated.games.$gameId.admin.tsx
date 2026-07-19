@@ -379,16 +379,46 @@ function AdminPage() {
   );
 }
 
-function SettleRow({ q, onSettle }: { q: any; onSettle: (ans: string) => void }) {
+function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
+  q: any;
+  onSettle: (ans: string) => void;
+  onUpdateLock: (iso: string) => void;
+  onDelete: () => void;
+  toLocalInput: (d: Date) => string;
+}) {
   const [ans, setAns] = useState(q.correct_answer?.value ?? "");
+  const [lockLocal, setLockLocal] = useState(() => toLocalInput(new Date(q.lock_at)));
   const isMC = q.answer_type === "multiple_choice" && Array.isArray(q.options);
+  const settled = q.status === "settled";
+  const locked = !settled && new Date(q.lock_at).getTime() <= Date.now();
   return (
     <div className="rounded-lg border bg-card p-3">
-      <div className="min-w-0">
-        <div className="truncate font-medium">{q.question}</div>
-        <div className="text-xs text-muted-foreground">{q.status} · {q.points} p · {q.answer_type}</div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate font-medium">{q.question}</div>
+          <div className="text-xs text-muted-foreground">
+            {settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}
+          </div>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onDelete} title="Ta bort">
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
       </div>
-      {q.status !== "settled" && (
+
+      {!settled && (
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+            Stänger
+            <input type="datetime-local" value={lockLocal} onChange={(e) => setLockLocal(e.target.value)}
+              className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+          </label>
+          <Button size="sm" variant="outline" onClick={() => onUpdateLock(new Date(lockLocal).toISOString())}>
+            Uppdatera tid
+          </Button>
+        </div>
+      )}
+
+      {!settled && (
         <div className="mt-2 flex gap-2">
           {isMC ? (
             <select value={ans} onChange={(e) => setAns(e.target.value)} className="h-9 flex-1 rounded-md border bg-background px-2 text-sm">
@@ -405,6 +435,7 @@ function SettleRow({ q, onSettle }: { q: any; onSettle: (ans: string) => void })
     </div>
   );
 }
+
 
 function ResultsSection() {
   const qc = useQueryClient();
