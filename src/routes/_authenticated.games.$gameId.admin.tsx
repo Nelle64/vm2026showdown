@@ -571,8 +571,9 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCo
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate font-medium">{q.question}</div>
-          <div className="text-xs text-muted-foreground">
-            {settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span>{settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}</span>
+            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">{answerCount} svar</span>
           </div>
         </div>
         <Button size="icon" variant="ghost" onClick={onDelete} title="Ta bort">
