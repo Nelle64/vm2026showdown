@@ -73,7 +73,7 @@ function LeaderboardPage() {
           name: prof?.display_name ?? "Okänd",
           avatar: prof?.avatar_url ?? null,
 
-          total: mainPts + bonusPts,
+          total: mainPts,
           bonus: bonusPts,
           exact, outcome, wrong, picks: myPreds.length,
           accuracy: scored.length ? Math.round(((exact + outcome) / scored.length) * 100) : 0,
