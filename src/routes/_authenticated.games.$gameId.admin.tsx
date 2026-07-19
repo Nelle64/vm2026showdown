@@ -127,13 +127,23 @@ function AdminPage() {
   });
 
   // Bonusfråga
-  type Draft = { question: string; points: number; lockHours: number; answer_type: "text" | "number" | "player" | "team" | "multiple_choice"; options: string[] };
-  const [bq, setBq] = useState<Draft>({ question: "", points: 5, lockHours: 24, answer_type: "text", options: ["", ""] });
+  type Draft = { question: string; points: number; lockAt: string; answer_type: "text" | "number" | "player" | "team" | "multiple_choice"; options: string[] };
+  const toLocalInput = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const defaultLockAt = () => {
+    const d = new Date(Date.now() + 24 * 3600_000);
+    d.setSeconds(0, 0);
+    return toLocalInput(d);
+  };
+  const [bq, setBq] = useState<Draft>({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
 
   const createBonus = useMutation({
     mutationFn: async () => {
       if (!bq.question.trim()) throw new Error("Ange fråga");
-      const lockAt = new Date(Date.now() + bq.lockHours * 3600_000).toISOString();
+      if (!bq.lockAt) throw new Error("Ange låstid");
+      const lockAt = new Date(bq.lockAt).toISOString();
       const options = bq.answer_type === "multiple_choice"
         ? bq.options.map((o) => o.trim()).filter(Boolean)
         : null;
@@ -149,7 +159,34 @@ function AdminPage() {
     },
     onSuccess: () => {
       toast.success("Fråga skapad");
-      setBq({ question: "", points: 5, lockHours: 24, answer_type: "text", options: ["", ""] });
+      setBq({ question: "", points: 5, lockAt: defaultLockAt(), answer_type: "text", options: ["", ""] });
+      qc.invalidateQueries({ queryKey: ["admin-bonus"] });
+      qc.invalidateQueries({ queryKey: ["bonus"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateLockAt = useMutation({
+    mutationFn: async ({ id, lockAt }: { id: string; lockAt: string }) => {
+      const { error } = await supabase.from("bonus_questions")
+        .update({ lock_at: new Date(lockAt).toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Låstid uppdaterad");
+      qc.invalidateQueries({ queryKey: ["admin-bonus"] });
+      qc.invalidateQueries({ queryKey: ["bonus"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteBonus = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("bonus_questions").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Fråga borttagen");
       qc.invalidateQueries({ queryKey: ["admin-bonus"] });
       qc.invalidateQueries({ queryKey: ["bonus"] });
     },
@@ -277,7 +314,7 @@ function AdminPage() {
         <div className="space-y-2 rounded-xl border bg-card p-4">
           <input value={bq.question} onChange={(e) => setBq({ ...bq, question: e.target.value })}
             placeholder="ex. Vem gör flest mål i turneringen?" className="h-11 w-full rounded-md border bg-background px-3" />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <select value={bq.answer_type} onChange={(e) => setBq({ ...bq, answer_type: e.target.value as Draft["answer_type"] })}
               className="h-11 rounded-md border bg-background px-2">
               <option value="text">Fritext</option>
@@ -288,9 +325,14 @@ function AdminPage() {
             </select>
             <input type="number" min={1} max={100} value={bq.points} onChange={(e) => setBq({ ...bq, points: +e.target.value })}
               placeholder="Poäng" className="h-11 rounded-md border bg-background px-3" />
-            <input type="number" min={1} value={bq.lockHours} onChange={(e) => setBq({ ...bq, lockHours: +e.target.value })}
-              placeholder="Lås om (h)" className="h-11 rounded-md border bg-background px-3" />
+            <label className="col-span-2 flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground sm:col-span-1">
+              Stänger
+              <input type="datetime-local" value={bq.lockAt} onChange={(e) => setBq({ ...bq, lockAt: e.target.value })}
+                className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground" />
+            </label>
           </div>
+
+
 
           {bq.answer_type === "multiple_choice" && (
             <div className="space-y-2 rounded-md border border-dashed p-3">
@@ -320,9 +362,16 @@ function AdminPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 font-semibold">Rätta bonusfrågor</h2>
+        <h2 className="mb-3 font-semibold">Hantera bonusfrågor</h2>
         <div className="space-y-2">
-          {questions?.map((q: any) => <SettleRow key={q.id} q={q} onSettle={(ans) => settle.mutate({ id: q.id, answer: ans })} />)}
+          {questions?.map((q: any) => (
+            <SettleRow key={q.id} q={q}
+              toLocalInput={toLocalInput}
+              onSettle={(ans) => settle.mutate({ id: q.id, answer: ans })}
+              onUpdateLock={(iso) => updateLockAt.mutate({ id: q.id, lockAt: iso })}
+              onDelete={() => { if (confirm("Ta bort bonusfrågan?")) deleteBonus.mutate(q.id); }}
+            />
+          ))}
           {!questions?.length && <div className="text-sm text-muted-foreground">Inga frågor ännu.</div>}
         </div>
       </section>
@@ -330,16 +379,46 @@ function AdminPage() {
   );
 }
 
-function SettleRow({ q, onSettle }: { q: any; onSettle: (ans: string) => void }) {
+function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput }: {
+  q: any;
+  onSettle: (ans: string) => void;
+  onUpdateLock: (iso: string) => void;
+  onDelete: () => void;
+  toLocalInput: (d: Date) => string;
+}) {
   const [ans, setAns] = useState(q.correct_answer?.value ?? "");
+  const [lockLocal, setLockLocal] = useState(() => toLocalInput(new Date(q.lock_at)));
   const isMC = q.answer_type === "multiple_choice" && Array.isArray(q.options);
+  const settled = q.status === "settled";
+  const locked = !settled && new Date(q.lock_at).getTime() <= Date.now();
   return (
     <div className="rounded-lg border bg-card p-3">
-      <div className="min-w-0">
-        <div className="truncate font-medium">{q.question}</div>
-        <div className="text-xs text-muted-foreground">{q.status} · {q.points} p · {q.answer_type}</div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate font-medium">{q.question}</div>
+          <div className="text-xs text-muted-foreground">
+            {settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}
+          </div>
+        </div>
+        <Button size="icon" variant="ghost" onClick={onDelete} title="Ta bort">
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
       </div>
-      {q.status !== "settled" && (
+
+      {!settled && (
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
+            Stänger
+            <input type="datetime-local" value={lockLocal} onChange={(e) => setLockLocal(e.target.value)}
+              className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+          </label>
+          <Button size="sm" variant="outline" onClick={() => onUpdateLock(new Date(lockLocal).toISOString())}>
+            Uppdatera tid
+          </Button>
+        </div>
+      )}
+
+      {!settled && (
         <div className="mt-2 flex gap-2">
           {isMC ? (
             <select value={ans} onChange={(e) => setAns(e.target.value)} className="h-9 flex-1 rounded-md border bg-background px-2 text-sm">
@@ -356,6 +435,7 @@ function SettleRow({ q, onSettle }: { q: any; onSettle: (ans: string) => void })
     </div>
   );
 }
+
 
 function ResultsSection() {
   const qc = useQueryClient();

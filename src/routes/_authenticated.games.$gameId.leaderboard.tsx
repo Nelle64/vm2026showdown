@@ -73,7 +73,7 @@ function LeaderboardPage() {
           name: prof?.display_name ?? "Okänd",
           avatar: prof?.avatar_url ?? null,
 
-          total: mainPts + bonusPts,
+          total: mainPts,
           bonus: bonusPts,
           exact, outcome, wrong, picks: myPreds.length,
           accuracy: scored.length ? Math.round(((exact + outcome) / scored.length) * 100) : 0,
@@ -86,10 +86,12 @@ function LeaderboardPage() {
 
   if (isLoading) return <div className="text-muted-foreground">Laddar tabell...</div>;
 
+  const bonusRows = data ? [...data].sort((a, b) => b.bonus - a.bonus) : [];
+
   return (
     <div className="space-y-6">
       <section>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Poängställning</h2>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Poängställning – matcher</h2>
         <div className="space-y-2">
 
       {data?.map((r, i) => (
@@ -125,6 +127,43 @@ function LeaderboardPage() {
       ))}
           {!data?.length && (
             <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Inga medlemmar ännu.</div>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Poängställning – bonusfrågor</h2>
+        <div className="space-y-2">
+          {bonusRows.map((r, i) => (
+            <div key={r.user_id} className={cn(
+              "flex items-center gap-3 rounded-xl border bg-card p-3",
+              r.user_id === user!.id && "border-gold/50 bg-gold/5"
+            )}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold">
+                {i === 0 ? <Trophy className="h-5 w-5 text-gold" /> :
+                 i === 1 ? <Medal className="h-5 w-5 text-muted-foreground" /> :
+                 i === 2 ? <Medal className="h-5 w-5 text-amber-700" /> : <span className="text-muted-foreground">{i + 1}</span>}
+              </div>
+              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+                {r.avatar ? (
+                  <img src={r.avatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
+                    {r.name.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">{r.name}{r.user_id === user!.id ? " (du)" : ""}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-bold tabular-nums text-gold">{r.bonus}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">bonus</div>
+              </div>
+            </div>
+          ))}
+          {!bonusRows.length && (
+            <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">Inga bonuspoäng ännu.</div>
           )}
         </div>
       </section>
