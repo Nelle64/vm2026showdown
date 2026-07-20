@@ -454,10 +454,36 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     if (!favoriteScore || count > favoriteScore.count) favoriteScore = { score, count };
   }
 
+  // Personal signatures — each user's most tipped scoreline (guarantees every player gets a fact)
+  const perUserScore = new Map<string, Map<string, number>>();
+  preds.forEach((p) => {
+    const key = `${p.home_score}–${p.away_score}`;
+    if (!perUserScore.has(p.user_id)) perUserScore.set(p.user_id, new Map());
+    const m = perUserScore.get(p.user_id)!;
+    m.set(key, (m.get(key) ?? 0) + 1);
+  });
+  const signatures = userIds
+    .map((uid) => {
+      const m = perUserScore.get(uid);
+      if (!m || m.size === 0) {
+        return { user_id: uid, profile: profMap.get(uid), label: "Har inte tippat något ännu", value: "—" };
+      }
+      let bestKey = ""; let bestCount = 0;
+      m.forEach((c, k) => { if (c > bestCount) { bestCount = c; bestKey = k; } });
+      return {
+        user_id: uid,
+        profile: profMap.get(uid),
+        label: `Älskar resultatet ${bestKey}`,
+        value: `${bestCount} ggr`,
+      };
+    })
+    .sort((a, b) => (a.profile?.display_name ?? "").localeCompare(b.profile?.display_name ?? ""));
+
   return {
     rows,
     finishedCount: finishedMatches.length,
     totalPreds: preds.length,
+    signatures,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
     mostOutcome: mostOutcomeRow ? { profile: mostOutcomeRow.profile, value: mostOutcomeRow.outcome } : null,
     mostMissed: mostMissedRow && mostMissedRow.missed > 0 ? { profile: mostMissedRow.profile, value: mostMissedRow.missed } : null,
@@ -482,6 +508,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     matchOfTournament,
   };
 }
+
 
 // Helper for type inference of computeFacts input
 async function loadDummy() {
