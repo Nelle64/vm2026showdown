@@ -24,8 +24,6 @@ Demodata från det avslutade mästerskapet: **104 matcher · 1 028 tips · 10 sp
 
 ## Skärmbilder
 
-> Lägg PNG-filer i `docs/screenshots/` med filnamnen nedan.
-
 | | |
 |---|---|
 | ![Landing](docs/screenshots/01-landing.png) | ![Matcher](docs/screenshots/02-matches.png) |
