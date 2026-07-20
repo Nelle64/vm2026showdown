@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPages } from "@/lib/supabase-pagination";
-import { Trophy, Zap, Clock, Target, Crosshair, Ghost, Sparkles, TrendingUp, TrendingDown, Repeat, Award, Flame, Handshake, Home, Plane, Users, Snowflake, Shield, CalendarCheck, Star, Swords } from "lucide-react";
+import { Trophy, Zap, Clock, Target, Crosshair, Ghost, Sparkles, TrendingUp, TrendingDown, Repeat, Award, Flame, Handshake, Home, Plane, Users, Snowflake, Shield, CalendarCheck, Star, Swords, UserX, Compass, Shuffle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/summary")({ component: SummaryPage });
@@ -135,6 +135,12 @@ function SummaryPage() {
             winner={facts.mostActive} value={facts.mostActive && `${facts.mostActive.value} tips`} />
           <FactCard icon={<Star className="h-5 w-5" />} title="Kvällens match" subtitle="Match som gav flest 3-poängare"
             winner={null} value={facts.matchOfTournament ?? "—"} />
+          <FactCard icon={<Compass className="h-5 w-5" />} title="Rebellen" subtitle="Tippade mest olikt alla andra"
+            winner={facts.mostDifferent} value={facts.mostDifferent && `${facts.mostDifferent.value}% olika`} />
+          <FactCard icon={<UserX className="h-5 w-5" />} title="Ensamvargen" subtitle="Poäng när ingen annan fick något"
+            winner={facts.lonePoints} value={facts.lonePoints && `${facts.lonePoints.value} ensam-poäng`} tint="gold" />
+          <FactCard icon={<Shuffle className="h-5 w-5" />} title="Rätt siffror – fel lag" subtitle="Tippade omvänt resultat (t.ex. 2–1 istället för 1–2)"
+            winner={facts.reversedScore} value={facts.reversedScore && `${facts.reversedScore.value} gånger`} />
         </div>
       </section>
 
@@ -433,6 +439,46 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   });
 
+  // Rebellen — average % of other users on the same match who tipped a different scoreline
+  const diffRates = new Map<string, number>();
+  const diffAccum = new Map<string, { sum: number; n: number }>();
+  byMatch.forEach((list) => {
+    if (list.length < 2) return;
+    list.forEach((p) => {
+      const others = list.filter((o) => o.user_id !== p.user_id);
+      if (!others.length) return;
+      const different = others.filter((o) => o.home_score !== p.home_score || o.away_score !== p.away_score).length;
+      const share = different / others.length;
+      const acc = diffAccum.get(p.user_id) ?? { sum: 0, n: 0 };
+      acc.sum += share; acc.n++;
+      diffAccum.set(p.user_id, acc);
+    });
+  });
+  diffAccum.forEach((v, uid) => { if (v.n >= 5) diffRates.set(uid, Math.round((v.sum / v.n) * 100)); });
+
+  // Ensamvargen — total points scored on finished matches where no other user got any points
+  const lonePointsMap = new Map<string, number>();
+  finishedMatches.forEach((m) => {
+    const list = byMatch.get(m.id) ?? [];
+    const scorers = list.filter((p) => (p.points ?? 0) > 0);
+    if (scorers.length === 1) {
+      const p = scorers[0];
+      lonePointsMap.set(p.user_id, (lonePointsMap.get(p.user_id) ?? 0) + (p.points ?? 0));
+    }
+  });
+
+  // Rätt siffror – fel lag — tipped scoreline reversed matches actual, and not exact
+  const reversedMap = new Map<string, number>();
+  preds.forEach((p) => {
+    const m = matchMap.get(p.match_id);
+    if (!m || m.status !== "finished" || m.home_score == null || m.away_score == null) return;
+    if (m.home_score === m.away_score) return; // reversed == exact for draws
+    if (p.home_score === m.home_score && p.away_score === m.away_score) return;
+    if (p.home_score === m.away_score && p.away_score === m.home_score) {
+      reversedMap.set(p.user_id, (reversedMap.get(p.user_id) ?? 0) + 1);
+    }
+  });
+
   function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
     let bestKey: string | null = null;
     let bestVal = 0;
@@ -506,6 +552,9 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     boldestExact: boldestExact as { profile: Profile | undefined; value: string } | null,
     mostActive: pickBest(activeCounts),
     matchOfTournament,
+    mostDifferent: pickBest(diffRates),
+    lonePoints: pickBest(lonePointsMap),
+    reversedScore: pickBest(reversedMap),
   };
 }
 
