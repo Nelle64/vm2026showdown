@@ -48,6 +48,7 @@ function GameLayout() {
     { to: `/games/${gameId}/tournament`, label: "Turnering" },
     { to: `/games/${gameId}/bonus`, label: "Bonus" },
     { to: `/games/${gameId}/leaderboard`, label: "Tabell" },
+    { to: `/games/${gameId}/summary`, label: "Summering" },
     ...(isAdmin ? [{ to: `/games/${gameId}/admin`, label: "Admin" }] : []),
   ];
 
