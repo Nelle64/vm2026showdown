@@ -1,9 +1,10 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPages } from "@/lib/supabase-pagination";
-import { Trophy, Zap, Clock, Target, Crosshair, Ghost, Sparkles, TrendingUp, TrendingDown, Repeat, Award, Flame, Handshake, Home, Plane, Users, Snowflake, Shield, CalendarCheck, Star, Swords, UserX, Compass, Shuffle } from "lucide-react";
+import { Trophy, Zap, Clock, Target, Crosshair, Ghost, Sparkles, TrendingUp, TrendingDown, Repeat, Award, Flame, Handshake, Home, Plane, Users, Snowflake, Shield, Star, Swords, UserX, Compass, Shuffle, ListOrdered, Goal, Flag } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/summary")({ component: SummaryPage });
