@@ -1181,7 +1181,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     finishedCount: finishedMatches.length,
     totalPreds: preds.length,
     signatures,
-    titles,
+    duoFact,
     rankings,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
     mostOutcome: mostOutcomeRow
