@@ -138,6 +138,26 @@ function SummaryPage() {
         </div>
       </section>
 
+      {/* Personliga signaturer */}
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personliga signaturer</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Varje spelares egen lilla grej – mest tippade slutresultat.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {facts.signatures.map((s) => (
+            <div key={s.user_id} className="flex items-center gap-3 rounded-xl border bg-card p-3">
+              <Avatar profile={s.profile} size={10} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">{s.profile?.display_name ?? "Okänd"}</div>
+                <div className="truncate text-xs text-muted-foreground">{s.label}</div>
+              </div>
+              <div className="text-right text-sm font-bold text-gold tabular-nums">{s.value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
+
       {/* Slutställning */}
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Slutställning</h2>
@@ -434,10 +454,36 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     if (!favoriteScore || count > favoriteScore.count) favoriteScore = { score, count };
   }
 
+  // Personal signatures — each user's most tipped scoreline (guarantees every player gets a fact)
+  const perUserScore = new Map<string, Map<string, number>>();
+  preds.forEach((p) => {
+    const key = `${p.home_score}–${p.away_score}`;
+    if (!perUserScore.has(p.user_id)) perUserScore.set(p.user_id, new Map());
+    const m = perUserScore.get(p.user_id)!;
+    m.set(key, (m.get(key) ?? 0) + 1);
+  });
+  const signatures = userIds
+    .map((uid) => {
+      const m = perUserScore.get(uid);
+      if (!m || m.size === 0) {
+        return { user_id: uid, profile: profMap.get(uid), label: "Har inte tippat något ännu", value: "—" };
+      }
+      let bestKey = ""; let bestCount = 0;
+      m.forEach((c, k) => { if (c > bestCount) { bestCount = c; bestKey = k; } });
+      return {
+        user_id: uid,
+        profile: profMap.get(uid),
+        label: `Älskar resultatet ${bestKey}`,
+        value: `${bestCount} ggr`,
+      };
+    })
+    .sort((a, b) => (a.profile?.display_name ?? "").localeCompare(b.profile?.display_name ?? ""));
+
   return {
     rows,
     finishedCount: finishedMatches.length,
     totalPreds: preds.length,
+    signatures,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
     mostOutcome: mostOutcomeRow ? { profile: mostOutcomeRow.profile, value: mostOutcomeRow.outcome } : null,
     mostMissed: mostMissedRow && mostMissedRow.missed > 0 ? { profile: mostMissedRow.profile, value: mostMissedRow.missed } : null,
@@ -462,6 +508,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     matchOfTournament,
   };
 }
+
 
 // Helper for type inference of computeFacts input
 async function loadDummy() {
