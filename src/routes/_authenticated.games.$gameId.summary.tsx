@@ -319,12 +319,12 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     mostMissed: mostMissedRow && mostMissedRow.missed > 0 ? { profile: mostMissedRow.profile, value: mostMissedRow.missed } : null,
     bestAccuracy: bestAccRow ? { profile: bestAccRow.profile, value: bestAccRow.accuracy } : null,
     bonusKing: bonusKingRow && bonusKingRow.bonus > 0 ? { profile: bonusKingRow.profile, value: bonusKingRow.bonus } : null,
-    mostFirst: winnerFromMap(firstCounts, numCmp),
-    latest: winnerFromMap(avgLead, numCmp, true),
-    earliest: winnerFromMap(avgLead, numCmp),
-    mostNearMiss: winnerFromMap(nearMissCounts, numCmp),
-    optimist: winnerFromMap(avgGoals, numCmp),
-    pessimist: winnerFromMap(avgGoals, numCmp, true),
+    mostFirst: pickBest(firstCounts),
+    latest: pickBest(avgLead, true),
+    earliest: pickBest(avgLead),
+    mostNearMiss: pickBest(nearMissCounts),
+    optimist: pickBest(avgGoals),
+    pessimist: pickBest(avgGoals, true),
     favoriteScore,
   };
 }
