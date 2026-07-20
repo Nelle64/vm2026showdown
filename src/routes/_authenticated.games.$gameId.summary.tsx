@@ -458,9 +458,7 @@ function SummaryPage() {
             />
           )}
         </div>
-
       </section>
-
 
       {/* Personliga signaturer */}
       <section>
@@ -483,7 +481,6 @@ function SummaryPage() {
           ))}
         </div>
       </section>
-
 
       {/* Slutställning */}
       <section>
@@ -1253,13 +1250,6 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
       };
     }
   }
-
-
-
-
-
-
-
 
   return {
     rows,
