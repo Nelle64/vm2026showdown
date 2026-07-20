@@ -1158,32 +1158,40 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     fewestGoalsTipped: rankMap(goalsTotalFiltered, (v) => `${v} mål`, true),
   };
 
-  // Personal fun fact for the "Emma och Thea" duo — a shared account gets a shared shout-out
-  const duoEntry = Array.from(profMap.values()).find(
+  // Personal fun fact for "Emma och Thea" — highlight their long-term planning streak
+  const kidEntry = Array.from(profMap.values()).find(
     (p) => (p.display_name ?? "").trim().toLowerCase() === "emma och thea",
   );
   let duoFact: { profile: Profile; label: string; value: string } | null = null;
-  if (duoEntry) {
-    const duoPreds = preds.filter((p) => p.user_id === duoEntry.id);
-    const scoreCounts = new Map<string, number>();
-    for (const p of duoPreds) {
-      const k = `${p.home_score}–${p.away_score}`;
-      scoreCounts.set(k, (scoreCounts.get(k) ?? 0) + 1);
+  if (kidEntry) {
+    const matchById = matchMap as Map<string, Match>;
+    // avg lead time per user (hours before kickoff)
+    const leads = new Map<string, number[]>();
+    for (const p of preds) {
+      const m = matchById.get(p.match_id);
+      if (!m) continue;
+      const hours = (new Date(m.kickoff_at).getTime() - new Date(p.created_at).getTime()) / 3_600_000;
+      if (!Number.isFinite(hours)) continue;
+      if (!leads.has(p.user_id)) leads.set(p.user_id, []);
+      leads.get(p.user_id)!.push(hours);
     }
-    let topScore = "1–1";
-    let topCount = 0;
-    for (const [k, c] of scoreCounts) {
-      if (c > topCount) {
-        topScore = k;
-        topCount = c;
-      }
+    const avgLead = new Map<string, number>();
+    for (const [uid, arr] of leads) {
+      if (arr.length) avgLead.set(uid, arr.reduce((a, b) => a + b, 0) / arr.length);
     }
-    duoFact = {
-      profile: duoEntry,
-      label: "Duon med dubbel magkänsla",
-      value: `${duoPreds.length} tips tillsammans · favvoresultat ${topScore} (${topCount} ggr)`,
-    };
+    const kidAvg = avgLead.get(kidEntry.id);
+    if (kidAvg !== undefined) {
+      const ranked = Array.from(avgLead.entries()).sort((a, b) => b[1] - a[1]);
+      const rank = ranked.findIndex(([uid]) => uid === kidEntry.id) + 1;
+      const days = kidAvg / 24;
+      duoFact = {
+        profile: kidEntry,
+        label: "Framtidsspanaren",
+        value: `Tippade i snitt ${days.toFixed(1)} dagar före avspark · plats ${rank} av ${ranked.length}`,
+      };
+    }
   }
+
 
 
 
