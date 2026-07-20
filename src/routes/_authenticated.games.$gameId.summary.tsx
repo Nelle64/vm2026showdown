@@ -451,7 +451,7 @@ function SummaryPage() {
             <FactCard
               icon={<Users className="h-5 w-5" />}
               title={facts.cicciFact.label}
-              subtitle="Tippade bara matcherna som kändes rätt"
+              subtitle="Har en väldigt tydlig favorittid för att tippa"
               winner={{ profile: facts.cicciFact.profile }}
               value={facts.cicciFact.value}
               tint="gold"
@@ -1221,7 +1221,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   }
 
-  // Personal fun fact for "Cicci" — tips mostly during lunch hours
+  // Personal fun fact for "Cicci" — unconditional: show her signature tipping hour
   const cicciEntry = Array.from(profMap.values()).find(
     (p) => (p.display_name ?? "").trim().toLowerCase() === "cicci",
   );
@@ -1236,32 +1236,28 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
       const h = parts.find((p) => p.type === "hour")?.value ?? "0";
       return parseInt(h, 10) % 24;
     };
-    const lunchByUser = new Map<string, { lunch: number; total: number }>();
+    const cicciHours = new Map<number, number>();
+    let cicciTotal = 0;
     for (const p of preds) {
+      if (p.user_id !== cicciEntry.id) continue;
       const h = stockholmHour(p.created_at);
-      const cur = lunchByUser.get(p.user_id) ?? { lunch: 0, total: 0 };
-      cur.total += 1;
-      if (h >= 11 && h <= 13) cur.lunch += 1;
-      lunchByUser.set(p.user_id, cur);
+      cicciHours.set(h, (cicciHours.get(h) ?? 0) + 1);
+      cicciTotal += 1;
     }
-    const cicciStats = lunchByUser.get(cicciEntry.id);
-    if (cicciStats && cicciStats.total > 0) {
-      const cicciShare = cicciStats.lunch / cicciStats.total;
-      const topShare = Math.max(
-        ...Array.from(lunchByUser.values()).map((v) =>
-          v.total > 0 ? v.lunch / v.total : 0,
-        ),
-      );
-      if (cicciShare === topShare && cicciStats.lunch > 0) {
-        const pct = Math.round(cicciShare * 100);
-        cicciFact = {
-          profile: cicciEntry,
-          label: "Lunchtipparen",
-          value: `${cicciStats.lunch} av ${cicciStats.total} tips (${pct}%) landade mellan kl 11 och 13 — någon körde tipset över lunchen`,
-        };
-      }
+    let peakHour = -1;
+    let peakCount = 0;
+    for (const [h, c] of cicciHours) if (c > peakCount) [peakHour, peakCount] = [h, c];
+    if (peakHour >= 0 && cicciTotal > 0) {
+      const pct = Math.round((peakCount / cicciTotal) * 100);
+      const hh = peakHour.toString().padStart(2, "0");
+      cicciFact = {
+        profile: cicciEntry,
+        label: "Klockan-slår-ett-tipparen",
+        value: `Hela ${peakCount} av ${cicciTotal} tips (${pct}%) lades runt kl ${hh}:00 — favorittiden att sätta sig med matcherna`,
+      };
     }
   }
+
 
 
 
