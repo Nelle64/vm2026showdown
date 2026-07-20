@@ -61,6 +61,8 @@ type Match = {
   away_score: number | null;
   home_team_id: string | null;
   away_team_id: string | null;
+  stage: string | null;
+  group_letter: string | null;
 };
 type Bonus = { user_id: string; points: number | null };
 type Team = { id: string; name: string };
