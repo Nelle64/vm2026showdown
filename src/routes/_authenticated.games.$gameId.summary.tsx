@@ -433,7 +433,18 @@ function SummaryPage() {
             value={facts.fewestGoalsTipped && `${facts.fewestGoalsTipped.value} mål totalt`}
             ranking={facts.rankings.fewestGoalsTipped}
           />
+          {facts.duoFact && (
+            <FactCard
+              icon={<Users className="h-5 w-5" />}
+              title={facts.duoFact.label}
+              subtitle="Två hjärnor, ett konto – Emma & Thea"
+              winner={{ profile: facts.duoFact.profile }}
+              value={facts.duoFact.value}
+              tint="gold"
+            />
+          )}
         </div>
+
       </section>
 
 
