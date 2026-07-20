@@ -441,9 +441,19 @@ function SummaryPage() {
             <FactCard
               icon={<Users className="h-5 w-5" />}
               title={facts.duoFact.label}
-              subtitle="Två hjärnor, ett konto – Emma & Thea"
+              subtitle="Fixade hela turneringen på en enda kväll"
               winner={{ profile: facts.duoFact.profile }}
               value={facts.duoFact.value}
+              tint="gold"
+            />
+          )}
+          {facts.cicciFact && (
+            <FactCard
+              icon={<Users className="h-5 w-5" />}
+              title={facts.cicciFact.label}
+              subtitle="Tippade bara matcherna som kändes rätt"
+              winner={{ profile: facts.cicciFact.profile }}
+              value={facts.cicciFact.value}
               tint="gold"
             />
           )}
@@ -1211,6 +1221,31 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   }
 
+  // Personal fun fact for "Cicci" — skipped the most matches
+  const cicciEntry = Array.from(profMap.values()).find(
+    (p) => (p.display_name ?? "").trim().toLowerCase() === "cicci",
+  );
+  let cicciFact: { profile: Profile; label: string; value: string } | null = null;
+  if (cicciEntry) {
+    const totalMatches = matchMap.size;
+    const predsByUser = new Map<string, number>();
+    for (const p of preds) predsByUser.set(p.user_id, (predsByUser.get(p.user_id) ?? 0) + 1);
+    const cicciCount = predsByUser.get(cicciEntry.id) ?? 0;
+    const cicciSkipped = totalMatches - cicciCount;
+    const maxSkipped = Math.max(
+      ...Array.from(predsByUser.values()).map((c) => totalMatches - c),
+    );
+    if (cicciSkipped > 0 && cicciSkipped === maxSkipped) {
+      cicciFact = {
+        profile: cicciEntry,
+        label: "Den kräsna tipsaren",
+        value: `Hoppade över ${cicciSkipped} matcher — bara det som kändes rätt fick ett tips`,
+      };
+    }
+  }
+
+
+
 
 
 
@@ -1220,6 +1255,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     totalPreds: preds.length,
     signatures,
     duoFact,
+    cicciFact,
     rankings,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
     mostOutcome: mostOutcomeRow
