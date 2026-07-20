@@ -5,6 +5,7 @@ Bygger ett flexibelt rättningssystem där admin kan skapa frågor med flera del
 ### Så här kommer det fungera för admin
 
 När du skapar en bonusfråga får du välja typ:
+
 - **Fritext / Antal / Spelare / Lag / Flerval** – som idag (all-or-nothing)
 - **Antal (med närmast)** – ny: exakt-poäng + närmast-poäng inom en marginal du väljer
 - **Sammansatt** – ny: du bygger frågan med flera delfält, t.ex.

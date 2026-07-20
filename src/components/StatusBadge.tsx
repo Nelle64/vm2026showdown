@@ -27,7 +27,12 @@ export function StatusBadge({ status, kickoffAt }: { status: Status; kickoffAt?:
     cancelled: "bg-destructive/20 text-destructive border-destructive/40",
   };
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider", styles[s])}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+        styles[s],
+      )}
+    >
       {s === "live" && <span className="h-1.5 w-1.5 rounded-full bg-live-foreground" />}
       {labels[s]}
     </span>

@@ -39,7 +39,9 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
     queryFn: async () => {
       const { data: matches, error: mErr } = await supabase
         .from("matches")
-        .select("id, kickoff_at, status, home_score, away_score, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)")
+        .select(
+          "id, kickoff_at, status, home_score, away_score, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)",
+        )
         .order("kickoff_at");
       if (mErr) throw mErr;
 
@@ -54,19 +56,23 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
         ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", ids)
         : { data: [] as any[] };
       const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
-      const memberRows: MemberRow[] = ids.map((id) => ({
-        user_id: id,
-        display_name: profMap.get(id)?.display_name ?? "Okänd",
-        avatar_url: profMap.get(id)?.avatar_url ?? null,
-      })).sort((a, b) => a.display_name.localeCompare(b.display_name, "sv"));
+      const memberRows: MemberRow[] = ids
+        .map((id) => ({
+          user_id: id,
+          display_name: profMap.get(id)?.display_name ?? "Okänd",
+          avatar_url: profMap.get(id)?.avatar_url ?? null,
+        }))
+        .sort((a, b) => a.display_name.localeCompare(b.display_name, "sv"));
 
-      const preds = await fetchAllPages<PredRow>((from, to) => supabase
-        .from("predictions")
-        .select("user_id, match_id, home_score, away_score, points")
-        .eq("game_id", gameId)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to));
+      const preds = await fetchAllPages<PredRow>((from, to) =>
+        supabase
+          .from("predictions")
+          .select("user_id, match_id, home_score, away_score, points")
+          .eq("game_id", gameId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
 
       const predMap = new Map<string, PredRow>();
       preds.forEach((p) => predMap.set(`${p.user_id}:${p.match_id}`, p));
@@ -77,7 +83,11 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
 
   if (isLoading) return <div className="text-xs text-muted-foreground">Laddar gissningar...</div>;
   if (!data || !data.matches.length || !data.members.length) {
-    return <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">Inga matcher eller medlemmar.</div>;
+    return (
+      <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
+        Inga matcher eller medlemmar.
+      </div>
+    );
   }
 
   const now = Date.now();
@@ -93,7 +103,9 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
       <table className="w-full border-collapse text-sm">
         <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-medium">Match</th>
+            <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left font-medium">
+              Match
+            </th>
             <th className="px-2 py-2 text-center font-medium">Resultat</th>
             {data.members.map((m) => (
               <th key={m.user_id} className="px-2 py-2 text-center font-medium">
@@ -107,7 +119,9 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
                       </div>
                     )}
                   </div>
-                  <span className="max-w-[60px] truncate text-[10px] normal-case">{m.display_name.split(" ")[0]}</span>
+                  <span className="max-w-[60px] truncate text-[10px] normal-case">
+                    {m.display_name.split(" ")[0]}
+                  </span>
                 </div>
               </th>
             ))}
@@ -132,27 +146,59 @@ export function PredictionsMatrix({ gameId }: { gameId: string }) {
                   </div>
                 </td>
                 <td className="px-2 py-2 text-center text-xs font-bold tabular-nums">
-                  {finished ? `${m.home_score}–${m.away_score}` : <span className="text-muted-foreground">–</span>}
+                  {finished ? (
+                    `${m.home_score}–${m.away_score}`
+                  ) : (
+                    <span className="text-muted-foreground">–</span>
+                  )}
                 </td>
                 {data.members.map((mem) => {
                   const p = data.predMap.get(`${mem.user_id}:${m.id}`);
                   if (!locked) {
                     return (
                       <td key={mem.user_id} className="px-2 py-2 text-center text-xs">
-                        {p ? <span className="text-success" title="Har tippat">✓</span> : <span className="text-muted-foreground">–</span>}
+                        {p ? (
+                          <span className="text-success" title="Har tippat">
+                            ✓
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">–</span>
+                        )}
                       </td>
                     );
                   }
                   if (!p) {
-                    return <td key={mem.user_id} className="px-2 py-2 text-center text-xs text-muted-foreground">–</td>;
+                    return (
+                      <td
+                        key={mem.user_id}
+                        className="px-2 py-2 text-center text-xs text-muted-foreground"
+                      >
+                        –
+                      </td>
+                    );
                   }
-                  const exact = finished && p.home_score === m.home_score && p.away_score === m.away_score;
+                  const exact =
+                    finished && p.home_score === m.home_score && p.away_score === m.away_score;
                   return (
-                    <td key={mem.user_id} className={cn("px-2 py-2 text-center text-xs font-bold tabular-nums", exact && "text-gold")}>
+                    <td
+                      key={mem.user_id}
+                      className={cn(
+                        "px-2 py-2 text-center text-xs font-bold tabular-nums",
+                        exact && "text-gold",
+                      )}
+                    >
                       {p.home_score}–{p.away_score}
                       {finished && (
-                        <div className={cn("mt-0.5 text-[9px] font-bold",
-                          p.points === 3 ? "text-gold" : p.points === 1 ? "text-success" : "text-muted-foreground")}>
+                        <div
+                          className={cn(
+                            "mt-0.5 text-[9px] font-bold",
+                            p.points === 3
+                              ? "text-gold"
+                              : p.points === 1
+                                ? "text-success"
+                                : "text-muted-foreground",
+                          )}
+                        >
                           {p.points ?? 0}p
                         </div>
                       )}

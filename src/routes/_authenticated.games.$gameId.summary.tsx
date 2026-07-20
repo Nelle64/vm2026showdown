@@ -3,15 +3,65 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPages } from "@/lib/supabase-pagination";
-import { Trophy, Zap, Clock, Target, Crosshair, Ghost, Sparkles, TrendingUp, TrendingDown, Repeat, Award, Flame, Handshake, Home, Plane, Users, Snowflake, Shield, Star, Swords, UserX, Compass, Shuffle, ListOrdered, Goal, Flag } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Trophy,
+  Zap,
+  Clock,
+  Target,
+  Crosshair,
+  Ghost,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Repeat,
+  Award,
+  Flame,
+  Handshake,
+  Home,
+  Plane,
+  Users,
+  Snowflake,
+  Shield,
+  Star,
+  Swords,
+  UserX,
+  Compass,
+  Shuffle,
+  ListOrdered,
+  Goal,
+  Flag,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/games/$gameId/summary")({ component: SummaryPage });
+export const Route = createFileRoute("/_authenticated/games/$gameId/summary")({
+  component: SummaryPage,
+});
 
 type Profile = { id: string; display_name: string | null; avatar_url: string | null };
-type Pred = { user_id: string; match_id: string; home_score: number; away_score: number; points: number | null; created_at: string };
-type Match = { id: string; kickoff_at: string; status: string; home_score: number | null; away_score: number | null; home_team_id: string | null; away_team_id: string | null };
+type Pred = {
+  user_id: string;
+  match_id: string;
+  home_score: number;
+  away_score: number;
+  points: number | null;
+  created_at: string;
+};
+type Match = {
+  id: string;
+  kickoff_at: string;
+  status: string;
+  home_score: number | null;
+  away_score: number | null;
+  home_team_id: string | null;
+  away_team_id: string | null;
+};
 type Bonus = { user_id: string; points: number | null };
 type Team = { id: string; name: string };
 
@@ -21,46 +71,80 @@ function SummaryPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["summary", gameId],
     queryFn: async () => {
-      const { data: members } = await supabase.from("game_members").select("user_id").eq("game_id", gameId);
+      const { data: members } = await supabase
+        .from("game_members")
+        .select("user_id")
+        .eq("game_id", gameId);
       const userIds = (members ?? []).map((m: any) => m.user_id);
       if (!userIds.length) return null;
 
-      const { data: profiles } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", userIds);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", userIds);
       const profMap = new Map<string, Profile>((profiles ?? []).map((p: any) => [p.id, p]));
 
-      const preds = await fetchAllPages<Pred>((from, to) => supabase.from("predictions")
-        .select("user_id, match_id, home_score, away_score, points, created_at")
-        .eq("game_id", gameId).in("user_id", userIds)
-        .order("created_at", { ascending: true }).order("id", { ascending: true }).range(from, to));
+      const preds = await fetchAllPages<Pred>((from, to) =>
+        supabase
+          .from("predictions")
+          .select("user_id, match_id, home_score, away_score, points, created_at")
+          .eq("game_id", gameId)
+          .in("user_id", userIds)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
 
-      const { data: matches } = await supabase.from("matches")
+      const { data: matches } = await supabase
+        .from("matches")
         .select("id, kickoff_at, status, home_score, away_score, home_team_id, away_team_id");
       const matchMap = new Map<string, Match>(((matches ?? []) as Match[]).map((m) => [m.id, m]));
       const finishedMatches = ((matches ?? []) as Match[]).filter((m) => m.status === "finished");
 
-      const teamIds = Array.from(new Set(((matches ?? []) as Match[]).flatMap((m) => [m.home_team_id, m.away_team_id]).filter(Boolean) as string[]));
+      const teamIds = Array.from(
+        new Set(
+          ((matches ?? []) as Match[])
+            .flatMap((m) => [m.home_team_id, m.away_team_id])
+            .filter(Boolean) as string[],
+        ),
+      );
       const { data: teams } = teamIds.length
         ? await supabase.from("teams").select("id, name").in("id", teamIds)
         : { data: [] as Team[] };
       const teamMap = new Map<string, Team>(((teams ?? []) as Team[]).map((t) => [t.id, t]));
 
-      const { data: bonusRows } = await supabase.from("bonus_answers")
+      const { data: bonusRows } = await supabase
+        .from("bonus_answers")
         .select("user_id, points, question:bonus_questions!inner(game_id)")
-        .eq("question.game_id", gameId).in("user_id", userIds);
+        .eq("question.game_id", gameId)
+        .in("user_id", userIds);
       const bonus = (bonusRows ?? []) as unknown as Bonus[];
 
-      return { userIds, profMap, preds, matches: (matches ?? []) as Match[], matchMap, finishedMatches, bonus, teamMap };
+      return {
+        userIds,
+        profMap,
+        preds,
+        matches: (matches ?? []) as Match[],
+        matchMap,
+        finishedMatches,
+        bonus,
+        teamMap,
+      };
     },
   });
 
-  const facts = useMemo(() => data ? computeFacts(data) : null, [data]);
+  const facts = useMemo(() => (data ? computeFacts(data) : null), [data]);
 
   if (isLoading || !facts) {
     return <div className="text-muted-foreground">Laddar sammanfattning…</div>;
   }
 
   if (!facts.rows.length) {
-    return <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Ingen data att summera ännu.</div>;
+    return (
+      <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+        Ingen data att summera ännu.
+      </div>
+    );
   }
 
   const [gold, silver, bronze] = facts.rows;
@@ -70,17 +154,21 @@ function SummaryPage() {
       {/* Hero */}
       <section className="rounded-2xl border border-gold/30 bg-gradient-to-b from-gold/10 to-transparent p-5 text-center">
         <div className="mb-1 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-          <Sparkles className="h-3.5 w-3.5" /> VM 2026 – Sammanfattning <Sparkles className="h-3.5 w-3.5" />
+          <Sparkles className="h-3.5 w-3.5" /> VM 2026 – Sammanfattning{" "}
+          <Sparkles className="h-3.5 w-3.5" />
         </div>
         <h1 className="text-2xl font-bold">Så gick det!</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {facts.finishedCount} matcher spelade · {facts.totalPreds} tips · {facts.rows.length} spelare
+          {facts.finishedCount} matcher spelade · {facts.totalPreds} tips · {facts.rows.length}{" "}
+          spelare
         </p>
       </section>
 
       {/* Podium */}
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Podium</h2>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Podium
+        </h2>
         <div className="grid grid-cols-3 items-end gap-2 sm:gap-4">
           <PodiumSlot row={silver} place={2} height="h-28" />
           <PodiumSlot row={gold} place={1} height="h-36" />
@@ -90,75 +178,272 @@ function SummaryPage() {
 
       {/* Fun facts */}
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fun facts</h2>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Fun facts
+        </h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FactCard icon={<Target className="h-5 w-5" />} title="Mest exakta" subtitle="Flest 3-poängare"
-            winner={facts.mostExact} value={facts.mostExact && `${facts.mostExact.value} exakta`} tint="gold" ranking={facts.rankings.mostExact} />
-          <FactCard icon={<Crosshair className="h-5 w-5" />} title="Bäst pricksäkerhet" subtitle="Andel exakt eller rätt utfall"
-            winner={facts.bestAccuracy} value={facts.bestAccuracy && `${facts.bestAccuracy.value}%`} tint="gold" ranking={facts.rankings.bestAccuracy} />
-          <FactCard icon={<Zap className="h-5 w-5" />} title="Snabbast på avtryckaren" subtitle="Först in med sitt tips flest gånger"
-            winner={facts.mostFirst} value={facts.mostFirst && `${facts.mostFirst.value} matcher först`} ranking={facts.rankings.mostFirst} />
-          <FactCard icon={<Clock className="h-5 w-5" />} title="Sista minuten-tippare" subtitle="Kortast snittid före avspark"
-            winner={facts.latest} value={facts.latest && formatDuration(facts.latest.value)} ranking={facts.rankings.latest} />
-          <FactCard icon={<Award className="h-5 w-5" />} title="Långtidsplanerare" subtitle="Längst snittid före avspark"
-            winner={facts.earliest} value={facts.earliest && formatDuration(facts.earliest.value)} ranking={facts.rankings.earliest} />
-          <FactCard icon={<Ghost className="h-5 w-5" />} title="Slarvern" subtitle="Missade flest matcher"
-            winner={facts.mostMissed} value={facts.mostMissed && `${facts.mostMissed.value} missade`} tint="muted" ranking={facts.rankings.mostMissed} />
-          <FactCard icon={<Flame className="h-5 w-5" />} title="Målsnöret" subtitle="Flest tips 1 mål från exakt resultat"
-            winner={facts.mostNearMiss} value={facts.mostNearMiss && `${facts.mostNearMiss.value} nära`} ranking={facts.rankings.mostNearMiss} />
-          <FactCard icon={<TrendingUp className="h-5 w-5" />} title="Optimisten" subtitle="Högst snitt mål per tips"
-            winner={facts.optimist} value={facts.optimist && `${facts.optimist.value.toFixed(2)} mål/tips`} ranking={facts.rankings.optimist} />
-          <FactCard icon={<TrendingDown className="h-5 w-5" />} title="Pessimisten" subtitle="Lägst snitt mål per tips"
-            winner={facts.pessimist} value={facts.pessimist && `${facts.pessimist.value.toFixed(2)} mål/tips`} ranking={facts.rankings.pessimist} />
-          <FactCard icon={<Repeat className="h-5 w-5" />} title="Favoritresultatet" subtitle="Mest tippade slutresultatet totalt"
-            winner={null} value={facts.favoriteScore && `${facts.favoriteScore.score} (${facts.favoriteScore.count} ggr)`} />
-          <FactCard icon={<Trophy className="h-5 w-5" />} title="Bonuskungen" subtitle="Mest bonuspoäng (räknas separat)"
-            winner={facts.bonusKing} value={facts.bonusKing && `${facts.bonusKing.value} p`} tint="gold" ranking={facts.rankings.bonusKing} />
-          <FactCard icon={<Target className="h-5 w-5" />} title="Utfallsmästaren" subtitle="Flest rätt utfall (1p)"
-            winner={facts.mostOutcome} value={facts.mostOutcome && `${facts.mostOutcome.value} utfall`} ranking={facts.rankings.mostOutcome} />
-          <FactCard icon={<Handshake className="h-5 w-5" />} title="Oavgjord-troende" subtitle="Störst andel oavgjorda tips"
-            winner={facts.drawLover} value={facts.drawLover && `${facts.drawLover.value}% oavgjorda`} ranking={facts.rankings.drawLover} />
-          <FactCard icon={<Home className="h-5 w-5" />} title="Hemmasugen" subtitle="Störst andel hemmavinst-tips"
-            winner={facts.homer} value={facts.homer && `${facts.homer.value}% hemmavinst`} ranking={facts.rankings.homer} />
-          <FactCard icon={<Plane className="h-5 w-5" />} title="Bortasugen" subtitle="Störst andel bortavinst-tips"
-            winner={facts.awayer} value={facts.awayer && `${facts.awayer.value}% bortavinst`} ranking={facts.rankings.awayer} />
-          <FactCard icon={<Flame className="h-5 w-5" />} title="Het strimma" subtitle="Längst svit i rad med poäng"
-            winner={facts.hotStreak} value={facts.hotStreak && `${facts.hotStreak.value} matcher i rad`} tint="gold" ranking={facts.rankings.hotStreak} />
-          <FactCard icon={<Snowflake className="h-5 w-5" />} title="Kall strimma" subtitle="Längst svit utan poäng"
-            winner={facts.coldStreak} value={facts.coldStreak && `${facts.coldStreak.value} matcher i rad`} tint="muted" ranking={facts.rankings.coldStreak} />
-          <FactCard icon={<Users className="h-5 w-5" />} title="Tvillingarna" subtitle="Paret med flest identiska tips"
-            winner={null} value={facts.twins && `${facts.twins.a} & ${facts.twins.b} – ${facts.twins.count} likadana`} />
-          <FactCard icon={<Shield className="h-5 w-5" />} title="Kontrarian" subtitle="Flest unika resultat ingen annan tippade"
-            winner={facts.contrarian} value={facts.contrarian && `${facts.contrarian.value} unika`} ranking={facts.rankings.contrarian} />
-          <FactCard icon={<Swords className="h-5 w-5" />} title="Modigast exakta" subtitle="Rätt exakt resultat med flest mål"
-            winner={facts.boldestExact} value={facts.boldestExact && facts.boldestExact.value} />
-          <FactCard icon={<Star className="h-5 w-5" />} title="Kvällens match" subtitle="Match som gav flest 3-poängare"
-            winner={null} value={facts.matchOfTournament ?? "—"} />
-          <FactCard icon={<Compass className="h-5 w-5" />} title="Rebellen" subtitle="Tippade mest olikt alla andra"
-            winner={facts.mostDifferent} value={facts.mostDifferent && `${facts.mostDifferent.value}% olika`} ranking={facts.rankings.mostDifferent} />
-          <FactCard icon={<UserX className="h-5 w-5" />} title="Ensamvargen" subtitle="Poäng när ingen annan fick något"
-            winner={facts.lonePoints} value={facts.lonePoints && `${facts.lonePoints.value} ensam-poäng`} tint="gold" ranking={facts.rankings.lonePoints} />
-          <FactCard icon={<Shuffle className="h-5 w-5" />} title="Rätt siffror – fel lag" subtitle="Tippade omvänt resultat (t.ex. 2–1 istället för 1–2)"
-            winner={facts.reversedScore} value={facts.reversedScore && `${facts.reversedScore.value} gånger`} ranking={facts.rankings.reversedScore} />
-          <FactCard icon={<Swords className="h-5 w-5" />} title="Mest emot Sverige" subtitle="Tippade oftast att Sverige inte skulle vinna"
-            winner={facts.antiSweden} value={facts.antiSweden && `${facts.antiSweden.value} matcher`} tint="muted" ranking={facts.rankings.antiSweden} />
-          <FactCard icon={<TrendingDown className="h-5 w-5" />} title="Underdog-troende" subtitle="Tippade förloraren till vinst flest gånger"
-            winner={facts.underdog} value={facts.underdog && `${facts.underdog.value} gånger`} ranking={facts.rankings.underdog} />
-          <FactCard icon={<Flag className="h-5 w-5" />} title="Spanien-troende" subtitle="Tippade Spanien till vinst flest gånger"
-            winner={facts.spainBeliever} value={facts.spainBeliever && `${facts.spainBeliever.value} matcher`} tint="gold" ranking={facts.rankings.spainBeliever} />
-          <FactCard icon={<TrendingDown className="h-5 w-5" />} title="Största smällen" subtitle="Tippade en vinnare som förlorade störst i mål"
-            winner={facts.worstDefeat} value={facts.worstDefeat?.value} tint="muted" ranking={facts.rankings.worstDefeat} />
-          <FactCard icon={<Goal className="h-5 w-5" />} title="Målkung i tips" subtitle="Tippade flest mål totalt i turneringen"
-            winner={facts.mostGoalsTipped} value={facts.mostGoalsTipped && `${facts.mostGoalsTipped.value} mål totalt`} ranking={facts.rankings.mostGoalsTipped} />
-          <FactCard icon={<Shield className="h-5 w-5" />} title="Kättjefri försvarare" subtitle="Tippade minst mål totalt i turneringen"
-            winner={facts.fewestGoalsTipped} value={facts.fewestGoalsTipped && `${facts.fewestGoalsTipped.value} mål totalt`} ranking={facts.rankings.fewestGoalsTipped} />
+          <FactCard
+            icon={<Target className="h-5 w-5" />}
+            title="Mest exakta"
+            subtitle="Flest 3-poängare"
+            winner={facts.mostExact}
+            value={facts.mostExact && `${facts.mostExact.value} exakta`}
+            tint="gold"
+            ranking={facts.rankings.mostExact}
+          />
+          <FactCard
+            icon={<Crosshair className="h-5 w-5" />}
+            title="Bäst pricksäkerhet"
+            subtitle="Andel exakt eller rätt utfall"
+            winner={facts.bestAccuracy}
+            value={facts.bestAccuracy && `${facts.bestAccuracy.value}%`}
+            tint="gold"
+            ranking={facts.rankings.bestAccuracy}
+          />
+          <FactCard
+            icon={<Zap className="h-5 w-5" />}
+            title="Snabbast på avtryckaren"
+            subtitle="Först in med sitt tips flest gånger"
+            winner={facts.mostFirst}
+            value={facts.mostFirst && `${facts.mostFirst.value} matcher först`}
+            ranking={facts.rankings.mostFirst}
+          />
+          <FactCard
+            icon={<Clock className="h-5 w-5" />}
+            title="Sista minuten-tippare"
+            subtitle="Kortast snittid före avspark"
+            winner={facts.latest}
+            value={facts.latest && formatDuration(facts.latest.value)}
+            ranking={facts.rankings.latest}
+          />
+          <FactCard
+            icon={<Award className="h-5 w-5" />}
+            title="Långtidsplanerare"
+            subtitle="Längst snittid före avspark"
+            winner={facts.earliest}
+            value={facts.earliest && formatDuration(facts.earliest.value)}
+            ranking={facts.rankings.earliest}
+          />
+          <FactCard
+            icon={<Ghost className="h-5 w-5" />}
+            title="Slarvern"
+            subtitle="Missade flest matcher"
+            winner={facts.mostMissed}
+            value={facts.mostMissed && `${facts.mostMissed.value} missade`}
+            tint="muted"
+            ranking={facts.rankings.mostMissed}
+          />
+          <FactCard
+            icon={<Flame className="h-5 w-5" />}
+            title="Målsnöret"
+            subtitle="Flest tips 1 mål från exakt resultat"
+            winner={facts.mostNearMiss}
+            value={facts.mostNearMiss && `${facts.mostNearMiss.value} nära`}
+            ranking={facts.rankings.mostNearMiss}
+          />
+          <FactCard
+            icon={<TrendingUp className="h-5 w-5" />}
+            title="Optimisten"
+            subtitle="Högst snitt mål per tips"
+            winner={facts.optimist}
+            value={facts.optimist && `${facts.optimist.value.toFixed(2)} mål/tips`}
+            ranking={facts.rankings.optimist}
+          />
+          <FactCard
+            icon={<TrendingDown className="h-5 w-5" />}
+            title="Pessimisten"
+            subtitle="Lägst snitt mål per tips"
+            winner={facts.pessimist}
+            value={facts.pessimist && `${facts.pessimist.value.toFixed(2)} mål/tips`}
+            ranking={facts.rankings.pessimist}
+          />
+          <FactCard
+            icon={<Repeat className="h-5 w-5" />}
+            title="Favoritresultatet"
+            subtitle="Mest tippade slutresultatet totalt"
+            winner={null}
+            value={
+              facts.favoriteScore &&
+              `${facts.favoriteScore.score} (${facts.favoriteScore.count} ggr)`
+            }
+          />
+          <FactCard
+            icon={<Trophy className="h-5 w-5" />}
+            title="Bonuskungen"
+            subtitle="Mest bonuspoäng (räknas separat)"
+            winner={facts.bonusKing}
+            value={facts.bonusKing && `${facts.bonusKing.value} p`}
+            tint="gold"
+            ranking={facts.rankings.bonusKing}
+          />
+          <FactCard
+            icon={<Target className="h-5 w-5" />}
+            title="Utfallsmästaren"
+            subtitle="Flest rätt utfall (1p)"
+            winner={facts.mostOutcome}
+            value={facts.mostOutcome && `${facts.mostOutcome.value} utfall`}
+            ranking={facts.rankings.mostOutcome}
+          />
+          <FactCard
+            icon={<Handshake className="h-5 w-5" />}
+            title="Oavgjord-troende"
+            subtitle="Störst andel oavgjorda tips"
+            winner={facts.drawLover}
+            value={facts.drawLover && `${facts.drawLover.value}% oavgjorda`}
+            ranking={facts.rankings.drawLover}
+          />
+          <FactCard
+            icon={<Home className="h-5 w-5" />}
+            title="Hemmasugen"
+            subtitle="Störst andel hemmavinst-tips"
+            winner={facts.homer}
+            value={facts.homer && `${facts.homer.value}% hemmavinst`}
+            ranking={facts.rankings.homer}
+          />
+          <FactCard
+            icon={<Plane className="h-5 w-5" />}
+            title="Bortasugen"
+            subtitle="Störst andel bortavinst-tips"
+            winner={facts.awayer}
+            value={facts.awayer && `${facts.awayer.value}% bortavinst`}
+            ranking={facts.rankings.awayer}
+          />
+          <FactCard
+            icon={<Flame className="h-5 w-5" />}
+            title="Het strimma"
+            subtitle="Längst svit i rad med poäng"
+            winner={facts.hotStreak}
+            value={facts.hotStreak && `${facts.hotStreak.value} matcher i rad`}
+            tint="gold"
+            ranking={facts.rankings.hotStreak}
+          />
+          <FactCard
+            icon={<Snowflake className="h-5 w-5" />}
+            title="Kall strimma"
+            subtitle="Längst svit utan poäng"
+            winner={facts.coldStreak}
+            value={facts.coldStreak && `${facts.coldStreak.value} matcher i rad`}
+            tint="muted"
+            ranking={facts.rankings.coldStreak}
+          />
+          <FactCard
+            icon={<Users className="h-5 w-5" />}
+            title="Tvillingarna"
+            subtitle="Paret med flest identiska tips"
+            winner={null}
+            value={
+              facts.twins && `${facts.twins.a} & ${facts.twins.b} – ${facts.twins.count} likadana`
+            }
+          />
+          <FactCard
+            icon={<Shield className="h-5 w-5" />}
+            title="Kontrarian"
+            subtitle="Flest unika resultat ingen annan tippade"
+            winner={facts.contrarian}
+            value={facts.contrarian && `${facts.contrarian.value} unika`}
+            ranking={facts.rankings.contrarian}
+          />
+          <FactCard
+            icon={<Swords className="h-5 w-5" />}
+            title="Modigast exakta"
+            subtitle="Rätt exakt resultat med flest mål"
+            winner={facts.boldestExact}
+            value={facts.boldestExact && facts.boldestExact.value}
+          />
+          <FactCard
+            icon={<Star className="h-5 w-5" />}
+            title="Kvällens match"
+            subtitle="Match som gav flest 3-poängare"
+            winner={null}
+            value={facts.matchOfTournament ?? "—"}
+          />
+          <FactCard
+            icon={<Compass className="h-5 w-5" />}
+            title="Rebellen"
+            subtitle="Tippade mest olikt alla andra"
+            winner={facts.mostDifferent}
+            value={facts.mostDifferent && `${facts.mostDifferent.value}% olika`}
+            ranking={facts.rankings.mostDifferent}
+          />
+          <FactCard
+            icon={<UserX className="h-5 w-5" />}
+            title="Ensamvargen"
+            subtitle="Poäng när ingen annan fick något"
+            winner={facts.lonePoints}
+            value={facts.lonePoints && `${facts.lonePoints.value} ensam-poäng`}
+            tint="gold"
+            ranking={facts.rankings.lonePoints}
+          />
+          <FactCard
+            icon={<Shuffle className="h-5 w-5" />}
+            title="Rätt siffror – fel lag"
+            subtitle="Tippade omvänt resultat (t.ex. 2–1 istället för 1–2)"
+            winner={facts.reversedScore}
+            value={facts.reversedScore && `${facts.reversedScore.value} gånger`}
+            ranking={facts.rankings.reversedScore}
+          />
+          <FactCard
+            icon={<Swords className="h-5 w-5" />}
+            title="Mest emot Sverige"
+            subtitle="Tippade oftast att Sverige inte skulle vinna"
+            winner={facts.antiSweden}
+            value={facts.antiSweden && `${facts.antiSweden.value} matcher`}
+            tint="muted"
+            ranking={facts.rankings.antiSweden}
+          />
+          <FactCard
+            icon={<TrendingDown className="h-5 w-5" />}
+            title="Underdog-troende"
+            subtitle="Tippade förloraren till vinst flest gånger"
+            winner={facts.underdog}
+            value={facts.underdog && `${facts.underdog.value} gånger`}
+            ranking={facts.rankings.underdog}
+          />
+          <FactCard
+            icon={<Flag className="h-5 w-5" />}
+            title="Spanien-troende"
+            subtitle="Tippade Spanien till vinst flest gånger"
+            winner={facts.spainBeliever}
+            value={facts.spainBeliever && `${facts.spainBeliever.value} matcher`}
+            tint="gold"
+            ranking={facts.rankings.spainBeliever}
+          />
+          <FactCard
+            icon={<TrendingDown className="h-5 w-5" />}
+            title="Största smällen"
+            subtitle="Tippade en vinnare som förlorade störst i mål"
+            winner={facts.worstDefeat}
+            value={facts.worstDefeat?.value}
+            tint="muted"
+            ranking={facts.rankings.worstDefeat}
+          />
+          <FactCard
+            icon={<Goal className="h-5 w-5" />}
+            title="Målkung i tips"
+            subtitle="Tippade flest mål totalt i turneringen"
+            winner={facts.mostGoalsTipped}
+            value={facts.mostGoalsTipped && `${facts.mostGoalsTipped.value} mål totalt`}
+            ranking={facts.rankings.mostGoalsTipped}
+          />
+          <FactCard
+            icon={<Shield className="h-5 w-5" />}
+            title="Kättjefri försvarare"
+            subtitle="Tippade minst mål totalt i turneringen"
+            winner={facts.fewestGoalsTipped}
+            value={facts.fewestGoalsTipped && `${facts.fewestGoalsTipped.value} mål totalt`}
+            ranking={facts.rankings.fewestGoalsTipped}
+          />
         </div>
       </section>
 
       {/* Personliga signaturer */}
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personliga signaturer</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Varje spelares egen lilla grej – mest tippade slutresultat.</p>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Personliga signaturer
+        </h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Varje spelares egen lilla grej – mest tippade slutresultat.
+        </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {facts.signatures.map((s) => (
             <div key={s.user_id} className="flex items-center gap-3 rounded-xl border bg-card p-3">
@@ -173,27 +458,37 @@ function SummaryPage() {
         </div>
       </section>
 
-
-
       {/* Slutställning */}
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Slutställning</h2>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Slutställning
+        </h2>
         <div className="space-y-2">
           {facts.rows.map((r, i) => (
-            <div key={r.user_id} className={cn("flex items-center gap-3 rounded-xl border bg-card p-3",
-              i === 0 && "border-gold/50 bg-gold/5")}>
-              <div className="w-6 text-center text-sm font-bold text-muted-foreground tabular-nums">{i + 1}</div>
+            <div
+              key={r.user_id}
+              className={cn(
+                "flex items-center gap-3 rounded-xl border bg-card p-3",
+                i === 0 && "border-gold/50 bg-gold/5",
+              )}
+            >
+              <div className="w-6 text-center text-sm font-bold text-muted-foreground tabular-nums">
+                {i + 1}
+              </div>
               <Avatar profile={r.profile} size={9} />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{r.profile?.display_name ?? "Okänd"}</div>
                 <div className="text-xs text-muted-foreground">
-                  {r.exact} exakt · {r.outcome} utfall · {r.wrong} fel{r.missed ? ` · ${r.missed} miss` : ""} · {r.accuracy}%
+                  {r.exact} exakt · {r.outcome} utfall · {r.wrong} fel
+                  {r.missed ? ` · ${r.missed} miss` : ""} · {r.accuracy}%
                   {r.bonus > 0 ? ` · ${r.bonus} bonus` : ""}
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-xl font-bold tabular-nums text-gold">{r.total}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">poäng</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  poäng
+                </div>
               </div>
             </div>
           ))}
@@ -203,24 +498,56 @@ function SummaryPage() {
   );
 }
 
-function PodiumSlot({ row, place, height }: { row: Row | undefined; place: 1 | 2 | 3; height: string }) {
+function PodiumSlot({
+  row,
+  place,
+  height,
+}: {
+  row: Row | undefined;
+  place: 1 | 2 | 3;
+  height: string;
+}) {
   if (!row) return <div />;
-  const medalColor = place === 1 ? "text-gold" : place === 2 ? "text-muted-foreground" : "text-amber-700";
-  const bg = place === 1 ? "bg-gold/15 border-gold/50" : place === 2 ? "bg-card border-border" : "bg-card border-border";
+  const medalColor =
+    place === 1 ? "text-gold" : place === 2 ? "text-muted-foreground" : "text-amber-700";
+  const bg =
+    place === 1
+      ? "bg-gold/15 border-gold/50"
+      : place === 2
+        ? "bg-card border-border"
+        : "bg-card border-border";
   return (
     <div className="flex flex-col items-center gap-2">
       <Avatar profile={row.profile} size={place === 1 ? 16 : 12} ring={place === 1} />
-      <div className="max-w-full truncate text-center text-sm font-semibold">{row.profile?.display_name ?? "Okänd"}</div>
-      <div className={cn("flex w-full flex-col items-center justify-end rounded-t-xl border p-2", height, bg)}>
+      <div className="max-w-full truncate text-center text-sm font-semibold">
+        {row.profile?.display_name ?? "Okänd"}
+      </div>
+      <div
+        className={cn(
+          "flex w-full flex-col items-center justify-end rounded-t-xl border p-2",
+          height,
+          bg,
+        )}
+      >
         <Trophy className={cn("h-6 w-6", medalColor)} />
         <div className="mt-1 text-lg font-bold tabular-nums text-gold">{row.total}</div>
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{place === 1 ? "Vinnare" : `${place}:a`}</div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          {place === 1 ? "Vinnare" : `${place}:a`}
+        </div>
       </div>
     </div>
   );
 }
 
-function Avatar({ profile, size = 9, ring }: { profile: Profile | undefined | null; size?: number; ring?: boolean }) {
+function Avatar({
+  profile,
+  size = 9,
+  ring,
+}: {
+  profile: Profile | undefined | null;
+  size?: number;
+  ring?: boolean;
+}) {
   const cls = `h-${size} w-${size} shrink-0 overflow-hidden rounded-full bg-muted ${ring ? "ring-2 ring-gold ring-offset-2 ring-offset-background" : ""}`;
   const initials = (profile?.display_name ?? "??").slice(0, 2).toUpperCase();
   return (
@@ -228,7 +555,9 @@ function Avatar({ profile, size = 9, ring }: { profile: Profile | undefined | nu
       {profile?.avatar_url ? (
         <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
       ) : (
-        <div className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">{initials}</div>
+        <div className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground">
+          {initials}
+        </div>
       )}
     </div>
   );
@@ -236,9 +565,20 @@ function Avatar({ profile, size = 9, ring }: { profile: Profile | undefined | nu
 
 type RankEntry = { profile: Profile | undefined; display: string };
 
-function FactCard({ icon, title, subtitle, winner, value, tint, ranking }: {
-  icon: React.ReactNode; title: string; subtitle: string;
-  winner: { profile: Profile | undefined } | null; value: string | null | undefined;
+function FactCard({
+  icon,
+  title,
+  subtitle,
+  winner,
+  value,
+  tint,
+  ranking,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  winner: { profile: Profile | undefined } | null;
+  value: string | null | undefined;
   tint?: "gold" | "muted";
   ranking?: RankEntry[];
 }) {
@@ -263,7 +603,11 @@ function FactCard({ icon, title, subtitle, winner, value, tint, ranking }: {
       </div>
       <div className="text-[11px] text-muted-foreground">{subtitle}</div>
       <div className="mt-3 flex items-center gap-3">
-        {winner ? <Avatar profile={winner.profile} size={10} /> : <div className="h-10 w-10 rounded-full bg-muted" />}
+        {winner ? (
+          <Avatar profile={winner.profile} size={10} />
+        ) : (
+          <div className="h-10 w-10 rounded-full bg-muted" />
+        )}
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold">{winner?.profile?.display_name ?? "—"}</div>
           <div className="truncate text-xs text-gold">{value ?? "—"}</div>
@@ -282,16 +626,23 @@ function FactCard({ icon, title, subtitle, winner, value, tint, ranking }: {
             </DialogHeader>
             <ol className="mt-2 space-y-2">
               {ranking!.map((r, i) => (
-                <li key={`${r.profile?.id ?? "x"}-${i}`} className={cn(
-                  "flex items-center gap-3 rounded-lg border bg-card p-2.5",
-                  i === 0 && "border-gold/50 bg-gold/5"
-                )}>
-                  <div className="w-6 text-center text-sm font-bold text-muted-foreground tabular-nums">{i + 1}</div>
+                <li
+                  key={`${r.profile?.id ?? "x"}-${i}`}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg border bg-card p-2.5",
+                    i === 0 && "border-gold/50 bg-gold/5",
+                  )}
+                >
+                  <div className="w-6 text-center text-sm font-bold text-muted-foreground tabular-nums">
+                    {i + 1}
+                  </div>
                   <Avatar profile={r.profile} size={8} />
                   <div className="min-w-0 flex-1 truncate text-sm font-semibold">
                     {r.profile?.display_name ?? "Okänd"}
                   </div>
-                  <div className="text-right text-sm font-bold tabular-nums text-gold">{r.display}</div>
+                  <div className="text-right text-sm font-bold tabular-nums text-gold">
+                    {r.display}
+                  </div>
                 </li>
               ))}
             </ol>
@@ -326,7 +677,9 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     const outcome = my.filter((p) => p.points === 1).length;
     const wrong = my.filter((p) => p.points === 0).length;
     const mainPts = my.reduce((s, p) => s + (p.points ?? 0), 0);
-    const bonusPts = bonus.filter((b) => b.user_id === uid).reduce((s, b) => s + (b.points ?? 0), 0);
+    const bonusPts = bonus
+      .filter((b) => b.user_id === uid)
+      .reduce((s, b) => s + (b.points ?? 0), 0);
     const missed = Math.max(0, finishedMatches.length - myFinished.length);
     const scored = myFinished.length;
     return {
@@ -334,7 +687,10 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
       profile: profMap.get(uid),
       total: mainPts,
       bonus: bonusPts,
-      exact, outcome, wrong, missed,
+      exact,
+      outcome,
+      wrong,
+      missed,
       picks: my.length,
       accuracy: scored ? Math.round(((exact + outcome) / scored) * 100) : 0,
     };
@@ -383,16 +739,22 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
       nearMissCounts.set(p.user_id, (nearMissCounts.get(p.user_id) ?? 0) + 1);
     }
     const g = goalsPredicted.get(p.user_id) ?? { sum: 0, n: 0 };
-    g.sum += p.home_score + p.away_score; g.n++;
+    g.sum += p.home_score + p.away_score;
+    g.n++;
     goalsPredicted.set(p.user_id, g);
     const key = `${p.home_score}-${p.away_score}`;
     scoreTally.set(key, (scoreTally.get(key) ?? 0) + 1);
   });
   const avgGoals = new Map<string, number>();
-  goalsPredicted.forEach((v, uid) => { if (v.n >= 5) avgGoals.set(uid, v.sum / v.n); });
+  goalsPredicted.forEach((v, uid) => {
+    if (v.n >= 5) avgGoals.set(uid, v.sum / v.n);
+  });
 
   // Draw / home / away preference (% of user's tips)
-  const outcomeShare = new Map<string, { draw: number; home: number; away: number; total: number }>();
+  const outcomeShare = new Map<
+    string,
+    { draw: number; home: number; away: number; total: number }
+  >();
   preds.forEach((p) => {
     const rec = outcomeShare.get(p.user_id) ?? { draw: 0, home: 0, away: 0, total: 0 };
     rec.total++;
@@ -419,10 +781,18 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
       .filter((p) => p.user_id === uid && matchMap.get(p.match_id)?.status === "finished")
       .map((p) => ({ p, kickoff: matchMap.get(p.match_id)!.kickoff_at }))
       .sort((a, b) => a.kickoff.localeCompare(b.kickoff));
-    let hot = 0, coldRun = 0, bestHot = 0, bestCold = 0;
+    let hot = 0,
+      coldRun = 0,
+      bestHot = 0,
+      bestCold = 0;
     seq.forEach(({ p }) => {
-      if ((p.points ?? 0) > 0) { hot++; coldRun = 0; }
-      else { coldRun++; hot = 0; }
+      if ((p.points ?? 0) > 0) {
+        hot++;
+        coldRun = 0;
+      } else {
+        coldRun++;
+        hot = 0;
+      }
       if (hot > bestHot) bestHot = hot;
       if (coldRun > bestCold) bestCold = coldRun;
     });
@@ -436,7 +806,10 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
   byMatch.forEach((list) => {
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
-        if (list[i].home_score === list[j].home_score && list[i].away_score === list[j].away_score) {
+        if (
+          list[i].home_score === list[j].home_score &&
+          list[i].away_score === list[j].away_score
+        ) {
           const [x, y] = [list[i].user_id, list[j].user_id].sort();
           const k = `${x}|${y}`;
           pairCount.set(k, (pairCount.get(k) ?? 0) + 1);
@@ -447,7 +820,11 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
   pairCount.forEach((count, key) => {
     if (!twins || count > twins.count) {
       const [x, y] = key.split("|");
-      twins = { a: profMap.get(x)?.display_name ?? "Okänd", b: profMap.get(y)?.display_name ?? "Okänd", count };
+      twins = {
+        a: profMap.get(x)?.display_name ?? "Okänd",
+        b: profMap.get(y)?.display_name ?? "Okänd",
+        count,
+      };
     }
   });
 
@@ -461,7 +838,8 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
       tally.get(k)!.push(p.user_id);
     });
     tally.forEach((users) => {
-      if (users.length === 1) contrarianCounts.set(users[0], (contrarianCounts.get(users[0]) ?? 0) + 1);
+      if (users.length === 1)
+        contrarianCounts.set(users[0], (contrarianCounts.get(users[0]) ?? 0) + 1);
     });
   });
 
@@ -473,7 +851,10 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     const total = p.home_score + p.away_score;
     if (total > boldestTotal) {
       boldestTotal = total;
-      boldestExact = { profile: profMap.get(p.user_id), value: `${p.home_score}–${p.away_score} (${total} mål)` };
+      boldestExact = {
+        profile: profMap.get(p.user_id),
+        value: `${p.home_score}–${p.away_score} (${total} mål)`,
+      };
     }
   });
 
@@ -488,8 +869,8 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     const exactHere = preds.filter((p) => p.match_id === m.id && p.points === 3).length;
     if (exactHere > bestMatchExact) {
       bestMatchExact = exactHere;
-      const home = m.home_team_id ? teamMap.get(m.home_team_id)?.name ?? "?" : "?";
-      const away = m.away_team_id ? teamMap.get(m.away_team_id)?.name ?? "?" : "?";
+      const home = m.home_team_id ? (teamMap.get(m.home_team_id)?.name ?? "?") : "?";
+      const away = m.away_team_id ? (teamMap.get(m.away_team_id)?.name ?? "?") : "?";
       matchOfTournament = `${home}–${away} ${m.home_score}–${m.away_score} (${exactHere} exakt)`;
     }
   });
@@ -502,14 +883,19 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     list.forEach((p) => {
       const others = list.filter((o) => o.user_id !== p.user_id);
       if (!others.length) return;
-      const different = others.filter((o) => o.home_score !== p.home_score || o.away_score !== p.away_score).length;
+      const different = others.filter(
+        (o) => o.home_score !== p.home_score || o.away_score !== p.away_score,
+      ).length;
       const share = different / others.length;
       const acc = diffAccum.get(p.user_id) ?? { sum: 0, n: 0 };
-      acc.sum += share; acc.n++;
+      acc.sum += share;
+      acc.n++;
       diffAccum.set(p.user_id, acc);
     });
   });
-  diffAccum.forEach((v, uid) => { if (v.n >= 5) diffRates.set(uid, Math.round((v.sum / v.n) * 100)); });
+  diffAccum.forEach((v, uid) => {
+    if (v.n >= 5) diffRates.set(uid, Math.round((v.sum / v.n) * 100));
+  });
 
   // Ensamvargen — total points scored on finished matches where no other user got any points
   const lonePointsMap = new Map<string, number>();
@@ -598,8 +984,8 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     const prev = worstDefeatMap.get(p.user_id) ?? 0;
     if (margin > prev) {
       worstDefeatMap.set(p.user_id, margin);
-      const home = m.home_team_id ? teamMap.get(m.home_team_id)?.name ?? "?" : "?";
-      const away = m.away_team_id ? teamMap.get(m.away_team_id)?.name ?? "?" : "?";
+      const home = m.home_team_id ? (teamMap.get(m.home_team_id)?.name ?? "?") : "?";
+      const away = m.away_team_id ? (teamMap.get(m.away_team_id)?.name ?? "?") : "?";
       worstDefeatDetail.set(p.user_id, `${home}–${away} ${m.home_score}–${m.away_score}`);
     }
   });
@@ -616,18 +1002,28 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     if (picks >= 5) goalsTotalFiltered.set(uid, v);
   });
 
-  function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
+  function pickBest(
+    map: Map<string, number>,
+    min = false,
+  ): { profile: Profile | undefined; value: number } | null {
     let bestKey: string | null = null;
     let bestVal = 0;
     for (const [k, v] of map) {
-      if (bestKey === null || (min ? v < bestVal : v > bestVal)) { bestKey = k; bestVal = v; }
+      if (bestKey === null || (min ? v < bestVal : v > bestVal)) {
+        bestKey = k;
+        bestVal = v;
+      }
     }
     return bestKey === null ? null : { profile: profMap.get(bestKey), value: bestVal };
   }
 
-  function rankMap(map: Map<string, number>, format: (v: number) => string, min = false): RankEntry[] {
+  function rankMap(
+    map: Map<string, number>,
+    format: (v: number) => string,
+    min = false,
+  ): RankEntry[] {
     return Array.from(map.entries())
-      .sort((a, b) => min ? a[1] - b[1] : b[1] - a[1])
+      .sort((a, b) => (min ? a[1] - b[1] : b[1] - a[1]))
       .map(([uid, v]) => ({ profile: profMap.get(uid), display: format(v) }));
   }
   function rankRows(sorted: Row[], format: (r: Row) => string): RankEntry[] {
@@ -658,10 +1054,21 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     .map((uid) => {
       const m = perUserScore.get(uid);
       if (!m || m.size === 0) {
-        return { user_id: uid, profile: profMap.get(uid), label: "Har inte tippat något ännu", value: "—" };
+        return {
+          user_id: uid,
+          profile: profMap.get(uid),
+          label: "Har inte tippat något ännu",
+          value: "—",
+        };
       }
-      let bestKey = ""; let bestCount = 0;
-      m.forEach((c, k) => { if (c > bestCount) { bestCount = c; bestKey = k; } });
+      let bestKey = "";
+      let bestCount = 0;
+      m.forEach((c, k) => {
+        if (c > bestCount) {
+          bestCount = c;
+          bestKey = k;
+        }
+      });
       return {
         user_id: uid,
         profile: profMap.get(uid),
@@ -678,17 +1085,38 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     if (best) {
       const uid = [...worstDefeatMap.entries()].sort((a, b) => b[1] - a[1])[0][0];
       const detail = worstDefeatDetail.get(uid);
-      worstDefeatWinner = { profile: best.profile, value: `${best.value} mål${detail ? ` (${detail})` : ""}` };
+      worstDefeatWinner = {
+        profile: best.profile,
+        value: `${best.value} mål${detail ? ` (${detail})` : ""}`,
+      };
     }
   }
 
   const rankings = {
-    mostExact: rankRows([...rows].sort((a, b) => b.exact - a.exact), (r) => `${r.exact} exakta`),
-    mostOutcome: rankRows([...rows].sort((a, b) => b.outcome - a.outcome), (r) => `${r.outcome} utfall`),
-    mostMissed: rankRows([...rows].sort((a, b) => b.missed - a.missed), (r) => `${r.missed} missade`),
-    bestAccuracy: rankRows([...withPickThreshold].sort((a, b) => b.accuracy - a.accuracy), (r) => `${r.accuracy}%`),
-    bonusKing: rankRows([...rows].sort((a, b) => b.bonus - a.bonus), (r) => `${r.bonus} p`),
-    mostActive: rankRows([...rows].sort((a, b) => b.picks - a.picks), (r) => `${r.picks} tips`),
+    mostExact: rankRows(
+      [...rows].sort((a, b) => b.exact - a.exact),
+      (r) => `${r.exact} exakta`,
+    ),
+    mostOutcome: rankRows(
+      [...rows].sort((a, b) => b.outcome - a.outcome),
+      (r) => `${r.outcome} utfall`,
+    ),
+    mostMissed: rankRows(
+      [...rows].sort((a, b) => b.missed - a.missed),
+      (r) => `${r.missed} missade`,
+    ),
+    bestAccuracy: rankRows(
+      [...withPickThreshold].sort((a, b) => b.accuracy - a.accuracy),
+      (r) => `${r.accuracy}%`,
+    ),
+    bonusKing: rankRows(
+      [...rows].sort((a, b) => b.bonus - a.bonus),
+      (r) => `${r.bonus} p`,
+    ),
+    mostActive: rankRows(
+      [...rows].sort((a, b) => b.picks - a.picks),
+      (r) => `${r.picks} tips`,
+    ),
     mostFirst: rankMap(firstCounts, (v) => `${v} ggr`),
     latest: rankMap(avgLead, (v) => formatDuration(v), true),
     earliest: rankMap(avgLead, (v) => formatDuration(v)),
@@ -724,10 +1152,18 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     signatures,
     rankings,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
-    mostOutcome: mostOutcomeRow ? { profile: mostOutcomeRow.profile, value: mostOutcomeRow.outcome } : null,
-    mostMissed: mostMissedRow && mostMissedRow.missed > 0 ? { profile: mostMissedRow.profile, value: mostMissedRow.missed } : null,
+    mostOutcome: mostOutcomeRow
+      ? { profile: mostOutcomeRow.profile, value: mostOutcomeRow.outcome }
+      : null,
+    mostMissed:
+      mostMissedRow && mostMissedRow.missed > 0
+        ? { profile: mostMissedRow.profile, value: mostMissedRow.missed }
+        : null,
     bestAccuracy: bestAccRow ? { profile: bestAccRow.profile, value: bestAccRow.accuracy } : null,
-    bonusKing: bonusKingRow && bonusKingRow.bonus > 0 ? { profile: bonusKingRow.profile, value: bonusKingRow.bonus } : null,
+    bonusKing:
+      bonusKingRow && bonusKingRow.bonus > 0
+        ? { profile: bonusKingRow.profile, value: bonusKingRow.bonus }
+        : null,
     mostFirst: pickBest(firstCounts),
     latest: pickBest(avgLead, true),
     earliest: pickBest(avgLead),
@@ -756,7 +1192,6 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     fewestGoalsTipped: pickBest(goalsTotalFiltered, true),
   };
 }
-
 
 // Helper for type inference of computeFacts input
 async function loadDummy() {

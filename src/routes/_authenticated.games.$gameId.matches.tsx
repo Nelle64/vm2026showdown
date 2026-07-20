@@ -4,10 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
 import { useGameLock } from "@/lib/use-game-lock";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useMemo } from "react";
 
-export const Route = createFileRoute("/_authenticated/games/$gameId/matches")({ component: MatchesPage });
+export const Route = createFileRoute("/_authenticated/games/$gameId/matches")({
+  component: MatchesPage,
+});
 
 function MatchesPage() {
   const { gameId } = useParams({ from: "/_authenticated/games/$gameId/matches" });
@@ -17,8 +24,11 @@ function MatchesPage() {
   const { data: matches, isLoading } = useQuery({
     queryKey: ["matches"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("matches")
-        .select("id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,code,name,flag_emoji), away:teams!matches_away_team_id_fkey(id,code,name,flag_emoji)")
+      const { data, error } = await supabase
+        .from("matches")
+        .select(
+          "id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,code,name,flag_emoji), away:teams!matches_away_team_id_fkey(id,code,name,flag_emoji)",
+        )
         .order("kickoff_at");
       if (error) throw error;
       return data as unknown as MatchRow[];
@@ -28,10 +38,16 @@ function MatchesPage() {
   const { data: predictions } = useQuery({
     queryKey: ["predictions", gameId, user!.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("predictions")
-        .select("match_id, home_score, away_score, points").eq("game_id", gameId).eq("user_id", user!.id);
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("match_id, home_score, away_score, points")
+        .eq("game_id", gameId)
+        .eq("user_id", user!.id);
       if (error) throw error;
-      const map = new Map<string, { home_score: number; away_score: number; points: number | null }>();
+      const map = new Map<
+        string,
+        { home_score: number; away_score: number; points: number | null }
+      >();
       data.forEach((p) => map.set(p.match_id, p));
       return map;
     },
@@ -46,7 +62,9 @@ function MatchesPage() {
       buckets.get(key)!.push(m);
     });
     return Array.from(buckets.entries()).map(([name, list]) => {
-      const unpicked = list.filter((m) => !predictions?.get(m.id) && m.status === "scheduled").length;
+      const unpicked = list.filter(
+        (m) => !predictions?.get(m.id) && m.status === "scheduled",
+      ).length;
       return {
         name,
         list,
@@ -57,7 +75,6 @@ function MatchesPage() {
     });
   }, [matches, getRoundName, predictions]);
 
-
   const defaultOpen = useMemo(() => {
     const now = Date.now();
     const next = groups.find((g) => g.list.some((m) => new Date(m.kickoff_at).getTime() > now));
@@ -65,7 +82,12 @@ function MatchesPage() {
   }, [groups]);
 
   if (isLoading) return <div className="text-muted-foreground">Laddar matcher...</div>;
-  if (!matches?.length) return <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Inga matcher ännu.</div>;
+  if (!matches?.length)
+    return (
+      <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+        Inga matcher ännu.
+      </div>
+    );
 
   return (
     <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
@@ -89,7 +111,15 @@ function MatchesPage() {
           <AccordionContent>
             <div className="space-y-3 pb-2">
               {g.list.map((m) => (
-                <MatchCard key={m.id} match={m} gameId={gameId} userId={user!.id} prediction={predictions?.get(m.id) ?? null} lockAt={getLockAt(m.id)} roundName={getRoundName(m.id)} />
+                <MatchCard
+                  key={m.id}
+                  match={m}
+                  gameId={gameId}
+                  userId={user!.id}
+                  prediction={predictions?.get(m.id) ?? null}
+                  lockAt={getLockAt(m.id)}
+                  roundName={getRoundName(m.id)}
+                />
               ))}
             </div>
           </AccordionContent>

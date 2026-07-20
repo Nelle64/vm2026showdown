@@ -33,7 +33,9 @@ export const Route = createFileRoute("/api/public/sync")({
               group_letter: t.group ?? null,
               flag_emoji: t.flag ?? null,
             }));
-            const { error } = await supabaseAdmin.from("teams").upsert(rows, { onConflict: "external_id" });
+            const { error } = await supabaseAdmin
+              .from("teams")
+              .upsert(rows, { onConflict: "external_id" });
             if (error) throw error;
           }
 
@@ -60,7 +62,9 @@ export const Route = createFileRoute("/api/public/sync")({
               .filter((r) => r.home_team_id && r.away_team_id);
             matchCount = rows.length;
             if (rows.length) {
-              const { error } = await supabaseAdmin.from("matches").upsert(rows, { onConflict: "external_id" });
+              const { error } = await supabaseAdmin
+                .from("matches")
+                .upsert(rows, { onConflict: "external_id" });
               if (error) throw error;
             }
           }

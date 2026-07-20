@@ -3,7 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { TeamFlag } from "@/components/TeamFlag";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/tournament")({
   component: TournamentPage,
@@ -26,8 +31,11 @@ function TournamentPage() {
   const { data: matches, isLoading } = useQuery({
     queryKey: ["tournament-matches"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("matches")
-        .select("id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,name,code), away:teams!matches_away_team_id_fkey(id,name,code)")
+      const { data, error } = await supabase
+        .from("matches")
+        .select(
+          "id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,name,code), away:teams!matches_away_team_id_fkey(id,name,code)",
+        )
         .order("kickoff_at");
       if (error) throw error;
       return data as unknown as Match[];
@@ -56,12 +64,20 @@ function TournamentPage() {
     <div className="space-y-6 pb-20">
       <section>
         <h2 className="mb-2 text-lg font-semibold">Gruppspel</h2>
-        <Accordion type="multiple" defaultValue={groupLetters.length ? [`group-${groupLetters[0]}`] : []} className="space-y-2">
+        <Accordion
+          type="multiple"
+          defaultValue={groupLetters.length ? [`group-${groupLetters[0]}`] : []}
+          className="space-y-2"
+        >
           {groupLetters.map((letter) => {
             const ms = groupMatches.filter((m) => m.group_letter === letter);
             const standings = computeStandings(ms);
             return (
-              <AccordionItem key={letter} value={`group-${letter}`} className="rounded-xl border bg-card">
+              <AccordionItem
+                key={letter}
+                value={`group-${letter}`}
+                className="rounded-xl border bg-card"
+              >
                 <AccordionTrigger className="px-3 py-2 hover:no-underline">
                   <div className="flex w-full items-center justify-between gap-2">
                     <span className="font-semibold">Grupp {letter}</span>
@@ -87,13 +103,19 @@ function TournamentPage() {
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Slutspel</h2>
-        <Accordion type="multiple" defaultValue={knockoutRounds.map((r) => r.key)} className="space-y-2">
+        <Accordion
+          type="multiple"
+          defaultValue={knockoutRounds.map((r) => r.key)}
+          className="space-y-2"
+        >
           {knockoutRounds.map((round) => (
             <AccordionItem key={round.key} value={round.key} className="rounded-xl border bg-card">
               <AccordionTrigger className="px-3 py-2 hover:no-underline">
                 <div className="flex w-full items-center justify-between gap-2">
                   <span className="font-semibold">{round.label}</span>
-                  <span className="text-xs text-muted-foreground">{round.matches.length} matcher</span>
+                  <span className="text-xs text-muted-foreground">
+                    {round.matches.length} matcher
+                  </span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-3 pb-3">
@@ -106,7 +128,9 @@ function TournamentPage() {
             </AccordionItem>
           ))}
           {knockoutRounds.length === 0 && (
-            <p className="text-sm text-muted-foreground">Slutspelets matcher dyker upp efter gruppspelet.</p>
+            <p className="text-sm text-muted-foreground">
+              Slutspelets matcher dyker upp efter gruppspelet.
+            </p>
           )}
         </Accordion>
       </section>
@@ -137,7 +161,14 @@ function MiniMatch({ m }: { m: Match }) {
 
 type StandingRow = {
   team: Team;
-  p: number; w: number; d: number; l: number; gf: number; ga: number; gd: number; pts: number;
+  p: number;
+  w: number;
+  d: number;
+  l: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  pts: number;
 };
 
 function computeStandings(matches: Match[]): StandingRow[] {
@@ -151,21 +182,40 @@ function computeStandings(matches: Match[]): StandingRow[] {
   };
 
   matches.forEach((m) => {
-    ensure(m.home); ensure(m.away);
+    ensure(m.home);
+    ensure(m.away);
     if (m.status !== "finished" || m.home_score == null || m.away_score == null) return;
-    const h = ensure(m.home), a = ensure(m.away);
+    const h = ensure(m.home),
+      a = ensure(m.away);
     if (!h || !a) return;
-    h.p++; a.p++;
-    h.gf += m.home_score; h.ga += m.away_score;
-    a.gf += m.away_score; a.ga += m.home_score;
-    if (m.home_score > m.away_score) { h.w++; h.pts += 3; a.l++; }
-    else if (m.home_score < m.away_score) { a.w++; a.pts += 3; h.l++; }
-    else { h.d++; a.d++; h.pts++; a.pts++; }
+    h.p++;
+    a.p++;
+    h.gf += m.home_score;
+    h.ga += m.away_score;
+    a.gf += m.away_score;
+    a.ga += m.home_score;
+    if (m.home_score > m.away_score) {
+      h.w++;
+      h.pts += 3;
+      a.l++;
+    } else if (m.home_score < m.away_score) {
+      a.w++;
+      a.pts += 3;
+      h.l++;
+    } else {
+      h.d++;
+      a.d++;
+      h.pts++;
+      a.pts++;
+    }
   });
 
   return Array.from(map.values())
     .map((r) => ({ ...r, gd: r.gf - r.ga }))
-    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.name.localeCompare(b.team.name));
+    .sort(
+      (a, b) =>
+        b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.name.localeCompare(b.team.name),
+    );
 }
 
 function StandingsTable({ rows }: { rows: StandingRow[] }) {
@@ -225,9 +275,10 @@ function splitKnockoutRounds(matches: Match[]) {
 
   // Om totalt antal matcher är <= 16, anta att det är åttondelsfinaler (32-lags playoff togs bort)
   let remaining = sorted.length;
-  const schema = remaining <= 32
-    ? ROUND_SCHEMA.slice(1) // hoppa över sextondelar
-    : ROUND_SCHEMA;
+  const schema =
+    remaining <= 32
+      ? ROUND_SCHEMA.slice(1) // hoppa över sextondelar
+      : ROUND_SCHEMA;
 
   const rounds: { key: string; label: string; matches: Match[] }[] = [];
   let idx = 0;

@@ -10,7 +10,9 @@ import { LockSettingsSection } from "@/components/admin/LockSettingsSection";
 import { TeamFlag } from "@/components/TeamFlag";
 import { fetchAllPages } from "@/lib/supabase-pagination";
 
-export const Route = createFileRoute("/_authenticated/games/$gameId/admin")({ component: AdminPage });
+export const Route = createFileRoute("/_authenticated/games/$gameId/admin")({
+  component: AdminPage,
+});
 
 function AdminPage() {
   const { gameId } = useParams({ from: "/_authenticated/games/$gameId/admin" });
@@ -20,7 +22,11 @@ function AdminPage() {
   const { data: game } = useQuery({
     queryKey: ["game", gameId],
     queryFn: async () => {
-      const { data } = await supabase.from("games").select("name, invite_code").eq("id", gameId).maybeSingle();
+      const { data } = await supabase
+        .from("games")
+        .select("name, invite_code")
+        .eq("id", gameId)
+        .maybeSingle();
       return data;
     },
   });
@@ -28,7 +34,8 @@ function AdminPage() {
   const { data: members } = useQuery({
     queryKey: ["admin-members", gameId],
     queryFn: async () => {
-      const { data: rows, error } = await supabase.from("game_members")
+      const { data: rows, error } = await supabase
+        .from("game_members")
         .select("id, user_id, is_admin")
         .eq("game_id", gameId);
       if (error) throw error;
@@ -37,12 +44,14 @@ function AdminPage() {
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, display_name, avatar_url")
-        .in("id", list.map((m) => m.user_id));
+        .in(
+          "id",
+          list.map((m) => m.user_id),
+        );
       const map = new Map((profiles ?? []).map((p: any) => [p.id, p]));
       return list.map((m) => ({ ...m, profile: map.get(m.user_id) ?? null }));
     },
   });
-
 
   const { data: requests } = useQuery({
     queryKey: ["join-requests", gameId],
@@ -85,7 +94,11 @@ function AdminPage() {
   const { data: questions } = useQuery({
     queryKey: ["admin-bonus", gameId],
     queryFn: async () => {
-      const { data } = await supabase.from("bonus_questions").select("*").eq("game_id", gameId).order("created_at", { ascending: false });
+      const { data } = await supabase
+        .from("bonus_questions")
+        .select("*")
+        .eq("game_id", gameId)
+        .order("created_at", { ascending: false });
       return data ?? [];
     },
   });
@@ -95,7 +108,10 @@ function AdminPage() {
     queryFn: async () => {
       const ids = questions?.map((q) => q.id) ?? [];
       if (!ids.length) return new Map<string, number>();
-      const { data, error } = await supabase.from("bonus_answers").select("question_id, user_id").in("question_id", ids);
+      const { data, error } = await supabase
+        .from("bonus_answers")
+        .select("question_id, user_id")
+        .in("question_id", ids);
       if (error) throw error;
       const map = new Map<string, number>();
       (data ?? []).forEach((a) => map.set(a.question_id, (map.get(a.question_id) ?? 0) + 1));
@@ -109,13 +125,19 @@ function AdminPage() {
       const { error } = await supabase.from("game_members").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Borttagen"); qc.invalidateQueries({ queryKey: ["admin-members"] }); },
+    onSuccess: () => {
+      toast.success("Borttagen");
+      qc.invalidateQueries({ queryKey: ["admin-members"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const toggleAdmin = useMutation({
     mutationFn: async ({ id, value }: { id: string; value: boolean }) => {
-      const { error } = await supabase.from("game_members").update({ is_admin: value }).eq("id", id);
+      const { error } = await supabase
+        .from("game_members")
+        .update({ is_admin: value })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-members"] }),
@@ -142,8 +164,22 @@ function AdminPage() {
 
   // Bonusfråga
   type PartKind = "text" | "number";
-  type Part = { key: string; label: string; kind: PartKind; points_exact: number; points_closest: number; margin: number };
-  type AType = "text" | "number" | "player" | "team" | "multiple_choice" | "number_closest" | "composite";
+  type Part = {
+    key: string;
+    label: string;
+    kind: PartKind;
+    points_exact: number;
+    points_closest: number;
+    margin: number;
+  };
+  type AType =
+    | "text"
+    | "number"
+    | "player"
+    | "team"
+    | "multiple_choice"
+    | "number_closest"
+    | "composite";
   type Draft = {
     question: string;
     points: number;
@@ -171,8 +207,22 @@ function AdminPage() {
     answer_type: "text",
     options: ["", ""],
     parts: [
-      { key: "part1", label: "Målskytt", kind: "text", points_exact: 1, points_closest: 0, margin: 0 },
-      { key: "part2", label: "Minut", kind: "number", points_exact: 3, points_closest: 1, margin: 2 },
+      {
+        key: "part1",
+        label: "Målskytt",
+        kind: "text",
+        points_exact: 1,
+        points_closest: 0,
+        margin: 0,
+      },
+      {
+        key: "part2",
+        label: "Minut",
+        kind: "number",
+        points_exact: 3,
+        points_closest: 1,
+        margin: 2,
+      },
     ],
     points_exact: 3,
     points_closest: 1,
@@ -195,14 +245,25 @@ function AdminPage() {
         options = opts;
       } else if (bq.answer_type === "number_closest") {
         if (bq.points_exact <= 0) throw new Error("Exakt-poäng måste vara > 0");
-        options = { points_exact: bq.points_exact, points_closest: bq.points_closest, margin: bq.margin };
+        options = {
+          points_exact: bq.points_exact,
+          points_closest: bq.points_closest,
+          margin: bq.margin,
+        };
         totalPoints = bq.points_exact;
       } else if (bq.answer_type === "composite") {
         if (bq.parts.length < 1) throw new Error("Lägg till minst ett delfält");
         const parts = bq.parts.map((p, i) => {
           const key = (p.key || `part${i + 1}`).trim();
           const label = (p.label || `Del ${i + 1}`).trim();
-          return { key, label, kind: p.kind, points_exact: p.points_exact, points_closest: p.kind === "number" ? p.points_closest : 0, margin: p.kind === "number" ? p.margin : 0 };
+          return {
+            key,
+            label,
+            kind: p.kind,
+            points_exact: p.points_exact,
+            points_closest: p.kind === "number" ? p.points_closest : 0,
+            margin: p.kind === "number" ? p.margin : 0,
+          };
         });
         const keys = parts.map((p) => p.key);
         if (new Set(keys).size !== keys.length) throw new Error("Delfält måste ha unika nycklar");
@@ -211,8 +272,12 @@ function AdminPage() {
       }
 
       const { error } = await supabase.from("bonus_questions").insert({
-        game_id: gameId, question: bq.question.trim(), points: totalPoints,
-        lock_at: lockAt, answer_type: bq.answer_type, options,
+        game_id: gameId,
+        question: bq.question.trim(),
+        points: totalPoints,
+        lock_at: lockAt,
+        answer_type: bq.answer_type,
+        options,
         created_by: user!.id,
       });
       if (error) throw error;
@@ -228,8 +293,10 @@ function AdminPage() {
 
   const updateLockAt = useMutation({
     mutationFn: async ({ id, lockAt }: { id: string; lockAt: string }) => {
-      const { error } = await supabase.from("bonus_questions")
-        .update({ lock_at: new Date(lockAt).toISOString() }).eq("id", id);
+      const { error } = await supabase
+        .from("bonus_questions")
+        .update({ lock_at: new Date(lockAt).toISOString() })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -255,14 +322,18 @@ function AdminPage() {
 
   const settle = useMutation({
     mutationFn: async ({ id, correct }: { id: string; correct: Record<string, any> }) => {
-      const { error } = await supabase.from("bonus_questions")
-        .update({ status: "settled", correct_answer: correct }).eq("id", id);
+      const { error } = await supabase
+        .from("bonus_questions")
+        .update({ status: "settled", correct_answer: correct })
+        .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Rättad"); qc.invalidateQueries(); },
+    onSuccess: () => {
+      toast.success("Rättad");
+      qc.invalidateQueries();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
-
 
   const copyInvite = () => {
     if (!game?.invite_code) return;
@@ -277,24 +348,35 @@ function AdminPage() {
         <h2 className="mb-3 font-semibold">Bjud in</h2>
         <div className="flex items-center gap-2">
           <div className="flex-1 truncate rounded-md border bg-background px-3 py-2 font-mono text-sm">
-            {typeof window !== "undefined" ? `${window.location.origin}/join/${game?.invite_code ?? ""}` : ""}
+            {typeof window !== "undefined"
+              ? `${window.location.origin}/join/${game?.invite_code ?? ""}`
+              : ""}
           </div>
           <Button size="icon" variant="outline" onClick={copyInvite} title="Kopiera länk">
             <Copy className="h-4 w-4" />
           </Button>
         </div>
-        <div className="mt-2 text-xs text-muted-foreground">Kod: <span className="font-mono text-gold">{game?.invite_code}</span></div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          Kod: <span className="font-mono text-gold">{game?.invite_code}</span>
+        </div>
       </section>
 
       <section className="rounded-xl border bg-card p-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Synka matchdata</h2>
-          <Button size="sm" onClick={() => sync.mutate()} disabled={sync.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
+          <Button
+            size="sm"
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending}
+            className="bg-gold text-gold-foreground hover:bg-gold/90"
+          >
             <RefreshCw className={"mr-1 h-4 w-4 " + (sync.isPending ? "animate-spin" : "")} />
             {sync.isPending ? "Synkar..." : "Synka nu"}
           </Button>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Hämtar lag och matcher från API-Football. Sker även automatiskt i bakgrunden.</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Hämtar lag och matcher från API-Football. Sker även automatiskt i bakgrunden.
+        </p>
       </section>
 
       <LockSettingsSection gameId={gameId} />
@@ -303,22 +385,34 @@ function AdminPage() {
 
       <PredictionStatusSection gameId={gameId} />
 
-
-
       <section>
         <h2 className="mb-3 font-semibold">
-          Ansökningar {requests && requests.length > 0 && <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs text-gold-foreground">{requests.length}</span>}
+          Ansökningar{" "}
+          {requests && requests.length > 0 && (
+            <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs text-gold-foreground">
+              {requests.length}
+            </span>
+          )}
         </h2>
         {!requests?.length ? (
-          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Inga väntande ansökningar.</div>
+          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            Inga väntande ansökningar.
+          </div>
         ) : (
           <div className="space-y-2">
             {requests.map((r: any) => (
-              <div key={r.id} className="flex items-center justify-between rounded-lg border bg-card p-3">
+              <div
+                key={r.id}
+                className="flex items-center justify-between rounded-lg border bg-card p-3"
+              >
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
                     {r.profile?.avatar_url ? (
-                      <img src={r.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                      <img
+                        src={r.profile.avatar_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-muted-foreground">
                         {(r.profile?.display_name ?? "??").slice(0, 2).toUpperCase()}
@@ -328,15 +422,30 @@ function AdminPage() {
                   <div>
                     <div className="font-medium">{r.profile?.display_name ?? "Okänd"}</div>
                     <div className="text-[11px] text-muted-foreground">
-                      {new Date(r.created_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(r.created_at).toLocaleString("sv-SE", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => decideRequest.mutate({ id: r.id, approve: true })} title="Godkänn">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => decideRequest.mutate({ id: r.id, approve: true })}
+                    title="Godkänn"
+                  >
                     <Check className="h-4 w-4 text-success" />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => decideRequest.mutate({ id: r.id, approve: false })} title="Avvisa">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => decideRequest.mutate({ id: r.id, approve: false })}
+                    title="Avvisa"
+                  >
                     <XCircle className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -350,17 +459,30 @@ function AdminPage() {
         <h2 className="mb-3 font-semibold">Medlemmar</h2>
         <div className="space-y-2">
           {members?.map((m: any) => (
-            <div key={m.id} className="flex items-center justify-between rounded-lg border bg-card p-3">
+            <div
+              key={m.id}
+              className="flex items-center justify-between rounded-lg border bg-card p-3"
+            >
               <div>
                 <div className="font-medium">{m.profile?.display_name ?? "Okänd"}</div>
                 {m.is_admin && <div className="text-xs text-gold">Admin</div>}
               </div>
               <div className="flex gap-1">
-                <Button size="icon" variant="ghost" onClick={() => toggleAdmin.mutate({ id: m.id, value: !m.is_admin })} title="Växla admin">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => toggleAdmin.mutate({ id: m.id, value: !m.is_admin })}
+                  title="Växla admin"
+                >
                   <UserCheck className={"h-4 w-4 " + (m.is_admin ? "text-gold" : "")} />
                 </Button>
                 {m.user_id !== user!.id && (
-                  <Button size="icon" variant="ghost" onClick={() => removeMember.mutate(m.id)} title="Ta bort">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => removeMember.mutate(m.id)}
+                    title="Ta bort"
+                  >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 )}
@@ -373,14 +495,23 @@ function AdminPage() {
       <section>
         <h2 className="mb-3 font-semibold">Skapa bonusfråga</h2>
         <div className="space-y-3 rounded-xl border bg-card p-4">
-          <input value={bq.question} onChange={(e) => setBq({ ...bq, question: e.target.value })}
-            placeholder="ex. Vem gör första målet och i vilken minut?" className="h-11 w-full rounded-md border bg-background px-3" />
+          <input
+            value={bq.question}
+            onChange={(e) => setBq({ ...bq, question: e.target.value })}
+            placeholder="ex. Vem gör första målet och i vilken minut?"
+            className="h-11 w-full rounded-md border bg-background px-3"
+          />
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <label className="flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground">
               Typ
-              <select value={bq.answer_type} onChange={(e) => setBq({ ...bq, answer_type: e.target.value as Draft["answer_type"] })}
-                className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground">
+              <select
+                value={bq.answer_type}
+                onChange={(e) =>
+                  setBq({ ...bq, answer_type: e.target.value as Draft["answer_type"] })
+                }
+                className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground"
+              >
                 <option value="text">Fritext</option>
                 <option value="number">Antal (exakt)</option>
                 <option value="number_closest">Antal (med närmast)</option>
@@ -393,33 +524,62 @@ function AdminPage() {
             {bq.answer_type !== "composite" && bq.answer_type !== "number_closest" && (
               <label className="flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground">
                 Poäng
-                <input type="number" min={1} max={100} value={bq.points} onChange={(e) => setBq({ ...bq, points: +e.target.value })}
-                  className="mt-1 h-11 rounded-md border bg-background px-3 text-sm text-foreground normal-case tracking-normal" />
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={bq.points}
+                  onChange={(e) => setBq({ ...bq, points: +e.target.value })}
+                  className="mt-1 h-11 rounded-md border bg-background px-3 text-sm text-foreground normal-case tracking-normal"
+                />
               </label>
             )}
             <label className="flex flex-col text-[11px] uppercase tracking-wider text-muted-foreground">
               Stänger
-              <input type="datetime-local" value={bq.lockAt} onChange={(e) => setBq({ ...bq, lockAt: e.target.value })}
-                className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground" />
+              <input
+                type="datetime-local"
+                value={bq.lockAt}
+                onChange={(e) => setBq({ ...bq, lockAt: e.target.value })}
+                className="mt-1 h-11 rounded-md border bg-background px-2 text-sm normal-case tracking-normal text-foreground"
+              />
             </label>
           </div>
 
           {bq.answer_type === "multiple_choice" && (
             <div className="space-y-2 rounded-md border border-dashed p-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Svarsalternativ</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Svarsalternativ
+              </div>
               {bq.options.map((opt, i) => (
                 <div key={i} className="flex gap-2">
-                  <input value={opt} onChange={(e) => {
-                    const next = [...bq.options]; next[i] = e.target.value; setBq({ ...bq, options: next });
-                  }} placeholder={`Alternativ ${i + 1}`} className="h-10 flex-1 rounded-md border bg-background px-3" />
+                  <input
+                    value={opt}
+                    onChange={(e) => {
+                      const next = [...bq.options];
+                      next[i] = e.target.value;
+                      setBq({ ...bq, options: next });
+                    }}
+                    placeholder={`Alternativ ${i + 1}`}
+                    className="h-10 flex-1 rounded-md border bg-background px-3"
+                  />
                   {bq.options.length > 2 && (
-                    <Button size="icon" variant="ghost" onClick={() => setBq({ ...bq, options: bq.options.filter((_, j) => j !== i) })}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() =>
+                        setBq({ ...bq, options: bq.options.filter((_, j) => j !== i) })
+                      }
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               ))}
-              <Button size="sm" variant="outline" onClick={() => setBq({ ...bq, options: [...bq.options, ""] })}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setBq({ ...bq, options: [...bq.options, ""] })}
+              >
                 <Plus className="mr-1 h-3 w-3" /> Lägg till
               </Button>
             </div>
@@ -429,21 +589,34 @@ function AdminPage() {
             <div className="grid grid-cols-3 gap-2 rounded-md border border-dashed p-3">
               <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
                 Exakt-poäng
-                <input type="number" min={0} value={bq.points_exact}
+                <input
+                  type="number"
+                  min={0}
+                  value={bq.points_exact}
                   onChange={(e) => setBq({ ...bq, points_exact: +e.target.value })}
-                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal"
+                />
               </label>
               <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
                 Närmast-poäng
-                <input type="number" min={0} value={bq.points_closest}
+                <input
+                  type="number"
+                  min={0}
+                  value={bq.points_closest}
                   onChange={(e) => setBq({ ...bq, points_closest: +e.target.value })}
-                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal"
+                />
               </label>
               <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
                 Marginal (±)
-                <input type="number" min={0} step="0.5" value={bq.margin}
+                <input
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={bq.margin}
                   onChange={(e) => setBq({ ...bq, margin: +e.target.value })}
-                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                  className="mt-1 h-10 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal"
+                />
               </label>
             </div>
           )}
@@ -451,23 +624,44 @@ function AdminPage() {
           {bq.answer_type === "composite" && (
             <div className="space-y-2 rounded-md border border-dashed p-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delfält</div>
-                <div className="text-[10px] text-muted-foreground">Total: {bq.parts.reduce((s, p) => s + (p.points_exact || 0), 0)} p</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Delfält
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  Total: {bq.parts.reduce((s, p) => s + (p.points_exact || 0), 0)} p
+                </div>
               </div>
               {bq.parts.map((p, i) => (
                 <div key={i} className="space-y-2 rounded-md border bg-background/50 p-2">
                   <div className="flex gap-2">
-                    <input value={p.label}
-                      onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, label: e.target.value }; setBq({ ...bq, parts: next }); }}
-                      placeholder={`Etikett (t.ex. Målskytt)`} className="h-9 flex-1 rounded-md border bg-background px-2 text-sm" />
-                    <select value={p.kind}
-                      onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, kind: e.target.value as PartKind }; setBq({ ...bq, parts: next }); }}
-                      className="h-9 rounded-md border bg-background px-2 text-sm">
+                    <input
+                      value={p.label}
+                      onChange={(e) => {
+                        const next = [...bq.parts];
+                        next[i] = { ...p, label: e.target.value };
+                        setBq({ ...bq, parts: next });
+                      }}
+                      placeholder={`Etikett (t.ex. Målskytt)`}
+                      className="h-9 flex-1 rounded-md border bg-background px-2 text-sm"
+                    />
+                    <select
+                      value={p.kind}
+                      onChange={(e) => {
+                        const next = [...bq.parts];
+                        next[i] = { ...p, kind: e.target.value as PartKind };
+                        setBq({ ...bq, parts: next });
+                      }}
+                      className="h-9 rounded-md border bg-background px-2 text-sm"
+                    >
                       <option value="text">Text</option>
                       <option value="number">Antal</option>
                     </select>
                     {bq.parts.length > 1 && (
-                      <Button size="icon" variant="ghost" onClick={() => setBq({ ...bq, parts: bq.parts.filter((_, j) => j !== i) })}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setBq({ ...bq, parts: bq.parts.filter((_, j) => j !== i) })}
+                      >
                         <X className="h-4 w-4" />
                       </Button>
                     )}
@@ -475,39 +669,84 @@ function AdminPage() {
                   <div className="grid grid-cols-3 gap-2">
                     <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
                       Exakt-p
-                      <input type="number" min={0} value={p.points_exact}
-                        onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, points_exact: +e.target.value }; setBq({ ...bq, parts: next }); }}
-                        className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                      <input
+                        type="number"
+                        min={0}
+                        value={p.points_exact}
+                        onChange={(e) => {
+                          const next = [...bq.parts];
+                          next[i] = { ...p, points_exact: +e.target.value };
+                          setBq({ ...bq, parts: next });
+                        }}
+                        className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal"
+                      />
                     </label>
                     {p.kind === "number" && (
                       <>
                         <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
                           Närmast-p
-                          <input type="number" min={0} value={p.points_closest}
-                            onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, points_closest: +e.target.value }; setBq({ ...bq, parts: next }); }}
-                            className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                          <input
+                            type="number"
+                            min={0}
+                            value={p.points_closest}
+                            onChange={(e) => {
+                              const next = [...bq.parts];
+                              next[i] = { ...p, points_closest: +e.target.value };
+                              setBq({ ...bq, parts: next });
+                            }}
+                            className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal"
+                          />
                         </label>
                         <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
                           Marginal
-                          <input type="number" min={0} step="0.5" value={p.margin}
-                            onChange={(e) => { const next = [...bq.parts]; next[i] = { ...p, margin: +e.target.value }; setBq({ ...bq, parts: next }); }}
-                            className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.5"
+                            value={p.margin}
+                            onChange={(e) => {
+                              const next = [...bq.parts];
+                              next[i] = { ...p, margin: +e.target.value };
+                              setBq({ ...bq, parts: next });
+                            }}
+                            className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal"
+                          />
                         </label>
                       </>
                     )}
                   </div>
                 </div>
               ))}
-              <Button size="sm" variant="outline" onClick={() => setBq({
-                ...bq,
-                parts: [...bq.parts, { key: `part${bq.parts.length + 1}`, label: "", kind: "text", points_exact: 1, points_closest: 0, margin: 0 }],
-              })}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setBq({
+                    ...bq,
+                    parts: [
+                      ...bq.parts,
+                      {
+                        key: `part${bq.parts.length + 1}`,
+                        label: "",
+                        kind: "text",
+                        points_exact: 1,
+                        points_closest: 0,
+                        margin: 0,
+                      },
+                    ],
+                  })
+                }
+              >
                 <Plus className="mr-1 h-3 w-3" /> Lägg till delfält
               </Button>
             </div>
           )}
 
-          <Button onClick={() => createBonus.mutate()} disabled={createBonus.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
+          <Button
+            onClick={() => createBonus.mutate()}
+            disabled={createBonus.isPending}
+            className="bg-gold text-gold-foreground hover:bg-gold/90"
+          >
             Skapa
           </Button>
         </div>
@@ -517,22 +756,35 @@ function AdminPage() {
         <h2 className="mb-3 font-semibold">Hantera bonusfrågor</h2>
         <div className="space-y-2">
           {questions?.map((q: any) => (
-            <SettleRow key={q.id} q={q}
+            <SettleRow
+              key={q.id}
+              q={q}
               toLocalInput={toLocalInput}
               answerCount={answerCounts?.get(q.id) ?? 0}
               onSettle={(correct) => settle.mutate({ id: q.id, correct })}
               onUpdateLock={(iso) => updateLockAt.mutate({ id: q.id, lockAt: iso })}
-              onDelete={() => { if (confirm("Ta bort bonusfrågan?")) deleteBonus.mutate(q.id); }}
+              onDelete={() => {
+                if (confirm("Ta bort bonusfrågan?")) deleteBonus.mutate(q.id);
+              }}
             />
           ))}
-          {!questions?.length && <div className="text-sm text-muted-foreground">Inga frågor ännu.</div>}
+          {!questions?.length && (
+            <div className="text-sm text-muted-foreground">Inga frågor ännu.</div>
+          )}
         </div>
       </section>
     </div>
   );
 }
 
-function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCount }: {
+function SettleRow({
+  q,
+  onSettle,
+  onUpdateLock,
+  onDelete,
+  toLocalInput,
+  answerCount,
+}: {
   q: any;
   onSettle: (correct: Record<string, any>) => void;
   onUpdateLock: (iso: string) => void;
@@ -545,7 +797,9 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCo
   const [ans, setAns] = useState<string>(q.correct_answer?.value ?? "");
   const [compAns, setCompAns] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
-    parts.forEach((p) => { init[p.key] = q.correct_answer?.[p.key] ?? ""; });
+    parts.forEach((p) => {
+      init[p.key] = q.correct_answer?.[p.key] ?? "";
+    });
     return init;
   });
   const [lockLocal, setLockLocal] = useState(() => toLocalInput(new Date(q.lock_at)));
@@ -572,8 +826,12 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCo
         <div className="min-w-0">
           <div className="truncate font-medium">{q.question}</div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>{settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}</span>
-            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">{answerCount} svar</span>
+            <span>
+              {settled ? "Rättad" : locked ? "Låst" : "Öppen"} · {q.points} p · {q.answer_type}
+            </span>
+            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">
+              {answerCount} svar
+            </span>
           </div>
         </div>
         <Button size="icon" variant="ghost" onClick={onDelete} title="Ta bort">
@@ -585,10 +843,18 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCo
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <label className="flex flex-col text-[10px] uppercase tracking-wider text-muted-foreground">
             Stänger
-            <input type="datetime-local" value={lockLocal} onChange={(e) => setLockLocal(e.target.value)}
-              className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal" />
+            <input
+              type="datetime-local"
+              value={lockLocal}
+              onChange={(e) => setLockLocal(e.target.value)}
+              className="mt-1 h-9 rounded-md border bg-background px-2 text-sm text-foreground normal-case tracking-normal"
+            />
           </label>
-          <Button size="sm" variant="outline" onClick={() => onUpdateLock(new Date(lockLocal).toISOString())}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onUpdateLock(new Date(lockLocal).toISOString())}
+          >
             Uppdatera tid
           </Button>
         </div>
@@ -600,29 +866,61 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCo
             <>
               {parts.map((p) => (
                 <div key={p.key} className="flex items-center gap-2">
-                  <div className="w-28 shrink-0 truncate text-xs text-muted-foreground">{p.label}</div>
-                  <input type={p.kind === "number" ? "number" : "text"}
+                  <div className="w-28 shrink-0 truncate text-xs text-muted-foreground">
+                    {p.label}
+                  </div>
+                  <input
+                    type={p.kind === "number" ? "number" : "text"}
                     value={compAns[p.key] ?? ""}
                     onChange={(e) => setCompAns({ ...compAns, [p.key]: e.target.value })}
                     placeholder="Rätt svar"
-                    className="h-9 flex-1 rounded-md border bg-background px-3 text-sm" />
+                    className="h-9 flex-1 rounded-md border bg-background px-3 text-sm"
+                  />
                 </div>
               ))}
-              <Button size="sm" onClick={submit} className="bg-gold text-gold-foreground hover:bg-gold/90">Rätta</Button>
+              <Button
+                size="sm"
+                onClick={submit}
+                className="bg-gold text-gold-foreground hover:bg-gold/90"
+              >
+                Rätta
+              </Button>
             </>
           ) : (
             <div className="flex gap-2">
               {isMC ? (
-                <select value={ans} onChange={(e) => setAns(e.target.value)} className="h-9 flex-1 rounded-md border bg-background px-2 text-sm">
+                <select
+                  value={ans}
+                  onChange={(e) => setAns(e.target.value)}
+                  className="h-9 flex-1 rounded-md border bg-background px-2 text-sm"
+                >
                   <option value="">Välj rätt svar</option>
-                  {q.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                  {q.options.map((o: string) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
                 </select>
               ) : (
-                <input type={q.answer_type === "number" || q.answer_type === "number_closest" ? "number" : "text"}
-                  value={ans} onChange={(e) => setAns(e.target.value)} placeholder="Rätt svar"
-                  className="h-9 flex-1 rounded-md border bg-background px-3 text-sm" />
+                <input
+                  type={
+                    q.answer_type === "number" || q.answer_type === "number_closest"
+                      ? "number"
+                      : "text"
+                  }
+                  value={ans}
+                  onChange={(e) => setAns(e.target.value)}
+                  placeholder="Rätt svar"
+                  className="h-9 flex-1 rounded-md border bg-background px-3 text-sm"
+                />
               )}
-              <Button size="sm" onClick={submit} className="bg-gold text-gold-foreground hover:bg-gold/90">Rätta</Button>
+              <Button
+                size="sm"
+                onClick={submit}
+                className="bg-gold text-gold-foreground hover:bg-gold/90"
+              >
+                Rätta
+              </Button>
             </div>
           )}
         </div>
@@ -633,26 +931,42 @@ function SettleRow({ q, onSettle, onUpdateLock, onDelete, toLocalInput, answerCo
   );
 }
 
-function ManualGradeSection({ q, parts, isComposite }: { q: any; parts: any[]; isComposite: boolean }) {
+function ManualGradeSection({
+  q,
+  parts,
+  isComposite,
+}: {
+  q: any;
+  parts: any[];
+  isComposite: boolean;
+}) {
   const qc = useQueryClient();
   const { data: rows } = useQuery({
     queryKey: ["admin-bonus-answers", q.id],
     queryFn: async () => {
-      const { data: ans } = await supabase.from("bonus_answers")
-        .select("id, user_id, answer, points").eq("question_id", q.id);
+      const { data: ans } = await supabase
+        .from("bonus_answers")
+        .select("id, user_id, answer, points")
+        .eq("question_id", q.id);
       const uids = (ans ?? []).map((a) => a.user_id);
       if (!uids.length) return [];
-      const { data: profs } = await supabase.from("profiles")
-        .select("id, display_name").in("id", uids);
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", uids);
       const pmap = new Map((profs ?? []).map((p: any) => [p.id, p.display_name]));
-      return (ans ?? []).map((a: any) => ({ ...a, name: pmap.get(a.user_id) ?? "Okänd" }))
+      return (ans ?? [])
+        .map((a: any) => ({ ...a, name: pmap.get(a.user_id) ?? "Okänd" }))
         .sort((a: any, b: any) => a.name.localeCompare(b.name, "sv"));
     },
   });
 
   const save = useMutation({
     mutationFn: async ({ id, points }: { id: string; points: number }) => {
-      const { error } = await supabase.rpc("admin_set_bonus_answer_points", { _answer_id: id, _points: points });
+      const { error } = await supabase.rpc("admin_set_bonus_answer_points", {
+        _answer_id: id,
+        _points: points,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -679,16 +993,32 @@ function ManualGradeSection({ q, parts, isComposite }: { q: any; parts: any[]; i
       </div>
       <div className="space-y-1.5">
         {rows.map((a: any) => (
-          <ManualGradeRow key={a.id} a={a} formatted={formatAns(a)} maxPoints={q.points}
-            onSave={(pts) => save.mutate({ id: a.id, points: pts })} pending={save.isPending} />
+          <ManualGradeRow
+            key={a.id}
+            a={a}
+            formatted={formatAns(a)}
+            maxPoints={q.points}
+            onSave={(pts) => save.mutate({ id: a.id, points: pts })}
+            pending={save.isPending}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function ManualGradeRow({ a, formatted, maxPoints, onSave, pending }: {
-  a: any; formatted: string; maxPoints: number; onSave: (p: number) => void; pending: boolean;
+function ManualGradeRow({
+  a,
+  formatted,
+  maxPoints,
+  onSave,
+  pending,
+}: {
+  a: any;
+  formatted: string;
+  maxPoints: number;
+  onSave: (p: number) => void;
+  pending: boolean;
 }) {
   const [pts, setPts] = useState<string>(a.points != null ? String(a.points) : "0");
   const dirty = String(a.points ?? 0) !== pts;
@@ -696,26 +1026,37 @@ function ManualGradeRow({ a, formatted, maxPoints, onSave, pending }: {
     <div className="flex items-center gap-2 text-sm">
       <span className="w-28 shrink-0 truncate text-muted-foreground">{a.name}</span>
       <span className="min-w-0 flex-1 truncate">{formatted}</span>
-      <input type="number" min={0} max={maxPoints} value={pts} onChange={(e) => setPts(e.target.value)}
-        className="h-8 w-16 rounded-md border bg-background px-2 text-center text-sm tabular-nums" />
-      <Button size="sm" variant={dirty ? "default" : "outline"} disabled={pending || !dirty || pts === ""}
+      <input
+        type="number"
+        min={0}
+        max={maxPoints}
+        value={pts}
+        onChange={(e) => setPts(e.target.value)}
+        className="h-8 w-16 rounded-md border bg-background px-2 text-center text-sm tabular-nums"
+      />
+      <Button
+        size="sm"
+        variant={dirty ? "default" : "outline"}
+        disabled={pending || !dirty || pts === ""}
         onClick={() => onSave(parseInt(pts, 10))}
-        className={dirty ? "bg-gold text-gold-foreground hover:bg-gold/90" : ""}>
+        className={dirty ? "bg-gold text-gold-foreground hover:bg-gold/90" : ""}
+      >
         Spara
       </Button>
     </div>
   );
 }
 
-
-
 function ResultsSection() {
   const qc = useQueryClient();
   const { data: matches } = useQuery({
     queryKey: ["admin-matches-results"],
     queryFn: async () => {
-      const { data } = await supabase.from("matches")
-        .select("id, kickoff_at, status, home_score, away_score, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)")
+      const { data } = await supabase
+        .from("matches")
+        .select(
+          "id, kickoff_at, status, home_score, away_score, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)",
+        )
         .order("kickoff_at");
       return data ?? [];
     },
@@ -723,7 +1064,8 @@ function ResultsSection() {
 
   const save = useMutation({
     mutationFn: async ({ id, h, a }: { id: string; h: number; a: number }) => {
-      const { error } = await supabase.from("matches")
+      const { error } = await supabase
+        .from("matches")
         .update({ home_score: h, away_score: a, status: "finished" })
         .eq("id", id);
       if (error) throw error;
@@ -742,14 +1084,27 @@ function ResultsSection() {
       <h2 className="mb-3 font-semibold">Mata in resultat</h2>
       <div className="space-y-2">
         {matches.map((m: any) => (
-          <ResultRow key={m.id} m={m} onSave={(h, a) => save.mutate({ id: m.id, h, a })} pending={save.isPending} />
+          <ResultRow
+            key={m.id}
+            m={m}
+            onSave={(h, a) => save.mutate({ id: m.id, h, a })}
+            pending={save.isPending}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function ResultRow({ m, onSave, pending }: { m: any; onSave: (h: number, a: number) => void; pending: boolean }) {
+function ResultRow({
+  m,
+  onSave,
+  pending,
+}: {
+  m: any;
+  onSave: (h: number, a: number) => void;
+  pending: boolean;
+}) {
   const [h, setH] = useState<string>(m.home_score != null ? String(m.home_score) : "");
   const [a, setA] = useState<string>(m.away_score != null ? String(m.away_score) : "");
   const finished = m.status === "finished";
@@ -764,15 +1119,36 @@ function ResultRow({ m, onSave, pending }: { m: any; onSave: (h: number, a: numb
           <TeamFlag code={m.away?.code} className="h-4 w-6" />
         </div>
         <div className="text-[11px] text-muted-foreground">
-          {new Date(m.kickoff_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          {new Date(m.kickoff_at).toLocaleString("sv-SE", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
           {finished && <span className="ml-1 text-success">· färdig</span>}
         </div>
       </div>
-      <input type="number" min={0} value={h} onChange={(e) => setH(e.target.value)} className="h-9 w-12 rounded-md border bg-background text-center font-semibold tabular-nums" />
+      <input
+        type="number"
+        min={0}
+        value={h}
+        onChange={(e) => setH(e.target.value)}
+        className="h-9 w-12 rounded-md border bg-background text-center font-semibold tabular-nums"
+      />
       <span className="text-muted-foreground">–</span>
-      <input type="number" min={0} value={a} onChange={(e) => setA(e.target.value)} className="h-9 w-12 rounded-md border bg-background text-center font-semibold tabular-nums" />
-      <Button size="sm" disabled={pending || h === "" || a === ""} onClick={() => onSave(parseInt(h, 10), parseInt(a, 10))}
-        className="bg-gold text-gold-foreground hover:bg-gold/90">
+      <input
+        type="number"
+        min={0}
+        value={a}
+        onChange={(e) => setA(e.target.value)}
+        className="h-9 w-12 rounded-md border bg-background text-center font-semibold tabular-nums"
+      />
+      <Button
+        size="sm"
+        disabled={pending || h === "" || a === ""}
+        onClick={() => onSave(parseInt(h, 10), parseInt(a, 10))}
+        className="bg-gold text-gold-foreground hover:bg-gold/90"
+      >
         {finished ? "Uppdatera" : "Spara"}
       </Button>
     </div>
@@ -787,8 +1163,11 @@ function PredictionStatusSection({ gameId }: { gameId: string }) {
     queryFn: async () => {
       const [{ data: memberRows }, { data: matches }] = await Promise.all([
         supabase.from("game_members").select("user_id").eq("game_id", gameId),
-        supabase.from("matches")
-          .select("id, kickoff_at, status, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)")
+        supabase
+          .from("matches")
+          .select(
+            "id, kickoff_at, status, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)",
+          )
           .gt("kickoff_at", new Date().toISOString())
           .eq("status", "scheduled")
           .order("kickoff_at"),
@@ -797,14 +1176,22 @@ function PredictionStatusSection({ gameId }: { gameId: string }) {
       if (memberIds.length === 0 || !matches?.length) return { matches: [], members: [] as any[] };
 
       const { data: profiles } = await supabase
-        .from("profiles").select("id, display_name").in("id", memberIds);
-      const preds = await fetchAllPages<{ match_id: string; user_id: string }>((from, to) => supabase
-        .from("predictions").select("match_id, user_id")
-        .eq("game_id", gameId)
-        .in("match_id", matches.map((m: any) => m.id))
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to));
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", memberIds);
+      const preds = await fetchAllPages<{ match_id: string; user_id: string }>((from, to) =>
+        supabase
+          .from("predictions")
+          .select("match_id, user_id")
+          .eq("game_id", gameId)
+          .in(
+            "match_id",
+            matches.map((m: any) => m.id),
+          )
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
 
       const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p.display_name as string]));
       const byMatch = new Map<string, Set<string>>();
@@ -858,10 +1245,20 @@ function PredictionStatusSection({ gameId }: { gameId: string }) {
                       <TeamFlag code={m.away?.code} className="h-4 w-6" />
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {new Date(m.kickoff_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(m.kickoff_at).toLocaleString("sv-SE", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </div>
                   </div>
-                  <div className={"shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold " + (allDone ? "bg-success/15 text-success" : "bg-muted text-muted-foreground")}>
+                  <div
+                    className={
+                      "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold " +
+                      (allDone ? "bg-success/15 text-success" : "bg-muted text-muted-foreground")
+                    }
+                  >
                     {m.tippedCount}/{total} tippat
                   </div>
                 </button>
@@ -876,10 +1273,17 @@ function PredictionStatusSection({ gameId }: { gameId: string }) {
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {m.missing.map((name: string) => (
-                            <span key={name} className="rounded-full bg-muted px-2 py-0.5 text-xs">{name}</span>
+                            <span key={name} className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                              {name}
+                            </span>
                           ))}
                         </div>
-                        <Button size="sm" variant="outline" className="mt-3" onClick={() => copyMissing(m.missing)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-3"
+                          onClick={() => copyMissing(m.missing)}
+                        >
                           <Copy className="mr-1 h-3 w-3" /> Kopiera namnlista
                         </Button>
                       </>
@@ -894,4 +1298,3 @@ function PredictionStatusSection({ gameId }: { gameId: string }) {
     </section>
   );
 }
-
