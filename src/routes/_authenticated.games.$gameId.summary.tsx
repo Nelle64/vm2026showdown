@@ -1164,7 +1164,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
   );
   let duoFact: { profile: Profile; label: string; value: string } | null = null;
   if (kidEntry) {
-    const matchById = new Map(matches.map((m) => [m.id, m]));
+    const matchById = matchMap as Map<string, Match>;
     // avg lead time per user (hours before kickoff)
     const leads = new Map<string, number[]>();
     for (const p of preds) {
