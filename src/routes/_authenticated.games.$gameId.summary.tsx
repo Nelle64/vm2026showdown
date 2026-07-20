@@ -135,6 +135,12 @@ function SummaryPage() {
             winner={facts.mostActive} value={facts.mostActive && `${facts.mostActive.value} tips`} />
           <FactCard icon={<Star className="h-5 w-5" />} title="Kvällens match" subtitle="Match som gav flest 3-poängare"
             winner={null} value={facts.matchOfTournament ?? "—"} />
+          <FactCard icon={<Compass className="h-5 w-5" />} title="Rebellen" subtitle="Tippade mest olikt alla andra"
+            winner={facts.mostDifferent} value={facts.mostDifferent && `${facts.mostDifferent.value}% olika`} />
+          <FactCard icon={<UserX className="h-5 w-5" />} title="Ensamvargen" subtitle="Poäng när ingen annan fick något"
+            winner={facts.lonePoints} value={facts.lonePoints && `${facts.lonePoints.value} ensam-poäng`} tint="gold" />
+          <FactCard icon={<Shuffle className="h-5 w-5" />} title="Rätt siffror – fel lag" subtitle="Tippade omvänt resultat (t.ex. 2–1 istället för 1–2)"
+            winner={facts.reversedScore} value={facts.reversedScore && `${facts.reversedScore.value} gånger`} />
         </div>
       </section>
 
