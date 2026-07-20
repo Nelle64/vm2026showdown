@@ -104,10 +104,30 @@ function SummaryPage() {
             winner={facts.pessimist} value={facts.pessimist && `${facts.pessimist.value.toFixed(2)} mål/tips`} />
           <FactCard icon={<Repeat className="h-5 w-5" />} title="Favoritresultatet" subtitle="Mest tippade slutresultatet totalt"
             winner={null} value={facts.favoriteScore && `${facts.favoriteScore.score} (${facts.favoriteScore.count} ggr)`} />
-          <FactCard icon={<Trophy className="h-5 w-5" />} title="Bonuskungen" subtitle="Mest bonuspoäng"
+          <FactCard icon={<Trophy className="h-5 w-5" />} title="Bonuskungen" subtitle="Mest bonuspoäng (räknas separat)"
             winner={facts.bonusKing} value={facts.bonusKing && `${facts.bonusKing.value} p`} tint="gold" />
           <FactCard icon={<Target className="h-5 w-5" />} title="Utfallsmästaren" subtitle="Flest rätt utfall (1p)"
             winner={facts.mostOutcome} value={facts.mostOutcome && `${facts.mostOutcome.value} utfall`} />
+          <FactCard icon={<Handshake className="h-5 w-5" />} title="Oavgjord-troende" subtitle="Störst andel oavgjorda tips"
+            winner={facts.drawLover} value={facts.drawLover && `${facts.drawLover.value}% oavgjorda`} />
+          <FactCard icon={<Home className="h-5 w-5" />} title="Hemmasugen" subtitle="Störst andel hemmavinst-tips"
+            winner={facts.homer} value={facts.homer && `${facts.homer.value}% hemmavinst`} />
+          <FactCard icon={<Plane className="h-5 w-5" />} title="Bortasugen" subtitle="Störst andel bortavinst-tips"
+            winner={facts.awayer} value={facts.awayer && `${facts.awayer.value}% bortavinst`} />
+          <FactCard icon={<Flame className="h-5 w-5" />} title="Het strimma" subtitle="Längst svit i rad med poäng"
+            winner={facts.hotStreak} value={facts.hotStreak && `${facts.hotStreak.value} matcher i rad`} tint="gold" />
+          <FactCard icon={<Snowflake className="h-5 w-5" />} title="Kall strimma" subtitle="Längst svit utan poäng"
+            winner={facts.coldStreak} value={facts.coldStreak && `${facts.coldStreak.value} matcher i rad`} tint="muted" />
+          <FactCard icon={<Users className="h-5 w-5" />} title="Tvillingarna" subtitle="Paret med flest identiska tips"
+            winner={null} value={facts.twins && `${facts.twins.a} & ${facts.twins.b} – ${facts.twins.count} likadana`} />
+          <FactCard icon={<Shield className="h-5 w-5" />} title="Kontrarian" subtitle="Flest unika resultat ingen annan tippade"
+            winner={facts.contrarian} value={facts.contrarian && `${facts.contrarian.value} unika`} />
+          <FactCard icon={<Swords className="h-5 w-5" />} title="Modigast exakta" subtitle="Rätt exakt resultat med flest mål"
+            winner={facts.boldestExact} value={facts.boldestExact && facts.boldestExact.value} />
+          <FactCard icon={<CalendarCheck className="h-5 w-5" />} title="Alltid på plats" subtitle="Tippade flest av alla matcher"
+            winner={facts.mostActive} value={facts.mostActive && `${facts.mostActive.value} tips`} />
+          <FactCard icon={<Star className="h-5 w-5" />} title="Kvällens match" subtitle="Match som gav flest 3-poängare"
+            winner={null} value={facts.matchOfTournament ?? "—"} />
         </div>
       </section>
 
