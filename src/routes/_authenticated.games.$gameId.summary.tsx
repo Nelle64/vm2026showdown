@@ -439,6 +439,46 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   });
 
+  // Rebellen — average % of other users on the same match who tipped a different scoreline
+  const diffRates = new Map<string, number>();
+  const diffAccum = new Map<string, { sum: number; n: number }>();
+  byMatch.forEach((list) => {
+    if (list.length < 2) return;
+    list.forEach((p) => {
+      const others = list.filter((o) => o.user_id !== p.user_id);
+      if (!others.length) return;
+      const different = others.filter((o) => o.home_score !== p.home_score || o.away_score !== p.away_score).length;
+      const share = different / others.length;
+      const acc = diffAccum.get(p.user_id) ?? { sum: 0, n: 0 };
+      acc.sum += share; acc.n++;
+      diffAccum.set(p.user_id, acc);
+    });
+  });
+  diffAccum.forEach((v, uid) => { if (v.n >= 5) diffRates.set(uid, Math.round((v.sum / v.n) * 100)); });
+
+  // Ensamvargen — total points scored on finished matches where no other user got any points
+  const lonePointsMap = new Map<string, number>();
+  finishedMatches.forEach((m) => {
+    const list = byMatch.get(m.id) ?? [];
+    const scorers = list.filter((p) => (p.points ?? 0) > 0);
+    if (scorers.length === 1) {
+      const p = scorers[0];
+      lonePointsMap.set(p.user_id, (lonePointsMap.get(p.user_id) ?? 0) + (p.points ?? 0));
+    }
+  });
+
+  // Rätt siffror – fel lag — tipped scoreline reversed matches actual, and not exact
+  const reversedMap = new Map<string, number>();
+  preds.forEach((p) => {
+    const m = matchMap.get(p.match_id);
+    if (!m || m.status !== "finished" || m.home_score == null || m.away_score == null) return;
+    if (m.home_score === m.away_score) return; // reversed == exact for draws
+    if (p.home_score === m.home_score && p.away_score === m.away_score) return;
+    if (p.home_score === m.away_score && p.away_score === m.home_score) {
+      reversedMap.set(p.user_id, (reversedMap.get(p.user_id) ?? 0) + 1);
+    }
+  });
+
   function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
     let bestKey: string | null = null;
     let bestVal = 0;
