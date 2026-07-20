@@ -1245,6 +1245,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     totalPreds: preds.length,
     signatures,
     duoFact,
+    cicciFact,
     rankings,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
     mostOutcome: mostOutcomeRow
