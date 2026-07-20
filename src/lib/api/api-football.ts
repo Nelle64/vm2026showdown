@@ -16,12 +16,14 @@ export function apiFootballProvider(apiKey: string): FootballProvider {
     async fetchTeams() {
       const res = await fetch(`${BASE}/teams?league=${WC_LEAGUE}&season=${SEASON}`, { headers });
       const json = await res.json();
-      return (json.response ?? []).map((t: any): ApiTeam => ({
-        externalId: String(t.team.id),
-        code: t.team.code ?? t.team.name.slice(0, 3).toUpperCase(),
-        name: t.team.name,
-        flag: t.team.flag,
-      }));
+      return (json.response ?? []).map(
+        (t: any): ApiTeam => ({
+          externalId: String(t.team.id),
+          code: t.team.code ?? t.team.name.slice(0, 3).toUpperCase(),
+          name: t.team.name,
+          flag: t.team.flag,
+        }),
+      );
     },
     async fetchMatches() {
       const res = await fetch(`${BASE}/fixtures?league=${WC_LEAGUE}&season=${SEASON}`, { headers });
@@ -47,9 +49,9 @@ export function apiFootballProvider(apiKey: string): FootballProvider {
 }
 
 function mapStatus(s: string): ApiMatch["status"] {
-  if (["FT","AET","PEN"].includes(s)) return "finished";
-  if (["1H","2H","HT","ET","BT","P","LIVE"].includes(s)) return "live";
+  if (["FT", "AET", "PEN"].includes(s)) return "finished";
+  if (["1H", "2H", "HT", "ET", "BT", "P", "LIVE"].includes(s)) return "live";
   if (s === "PST") return "postponed";
-  if (["CANC","ABD","AWD","WO"].includes(s)) return "cancelled";
+  if (["CANC", "ABD", "AWD", "WO"].includes(s)) return "cancelled";
   return "scheduled";
 }

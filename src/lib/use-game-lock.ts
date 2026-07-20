@@ -15,7 +15,11 @@ export function useGameLock(gameId: string) {
   const { data: game } = useQuery({
     queryKey: ["game-lockmode", gameId],
     queryFn: async () => {
-      const { data } = await supabase.from("games").select("lock_mode").eq("id", gameId).maybeSingle();
+      const { data } = await supabase
+        .from("games")
+        .select("lock_mode")
+        .eq("id", gameId)
+        .maybeSingle();
       return data as { lock_mode: GameLockMode } | null;
     },
   });

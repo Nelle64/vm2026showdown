@@ -19,7 +19,8 @@ function SignupPage() {
     if (password.length < 6) return toast.error("Lösenord måste vara minst 6 tecken");
     setLoading(true);
     const { error } = await supabase.auth.signUp({
-      email, password,
+      email,
+      password,
       options: { data: { display_name: name }, emailRedirectTo: `${window.location.origin}/games` },
     });
     setLoading(false);
@@ -29,7 +30,9 @@ function SignupPage() {
   };
 
   const onGoogle = async () => {
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/games" });
+    const r = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + "/games",
+    });
     if (r.error) return toast.error(r.error.message);
     if (r.redirected) return;
     navigate({ to: "/games" });
@@ -38,7 +41,9 @@ function SignupPage() {
   return (
     <div className="min-h-screen bg-pitch px-4 py-12">
       <div className="mx-auto max-w-sm">
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Tillbaka</Link>
+        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Tillbaka
+        </Link>
         <h1 className="mt-6 text-3xl font-bold">Skapa konto</h1>
         <p className="mt-1 text-sm text-muted-foreground">Börja tippa på 30 sekunder.</p>
 
@@ -50,18 +55,43 @@ function SignupPage() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3">
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Visningsnamn" maxLength={40}
-            className="h-11 w-full rounded-md border bg-card px-3 focus:outline-none focus:ring-2 focus:ring-ring" />
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-post"
-            className="h-11 w-full rounded-md border bg-card px-3 focus:outline-none focus:ring-2 focus:ring-ring" />
-          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Lösenord (min 6 tecken)"
-            className="h-11 w-full rounded-md border bg-card px-3 focus:outline-none focus:ring-2 focus:ring-ring" />
-          <Button type="submit" disabled={loading} className="h-11 w-full bg-gold text-gold-foreground hover:bg-gold/90">
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Visningsnamn"
+            maxLength={40}
+            className="h-11 w-full rounded-md border bg-card px-3 focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="E-post"
+            className="h-11 w-full rounded-md border bg-card px-3 focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Lösenord (min 6 tecken)"
+            className="h-11 w-full rounded-md border bg-card px-3 focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <Button
+            type="submit"
+            disabled={loading}
+            className="h-11 w-full bg-gold text-gold-foreground hover:bg-gold/90"
+          >
             {loading ? "Skapar..." : "Skapa konto"}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Har du redan konto? <Link to="/login" className="text-gold hover:underline">Logga in</Link>
+          Har du redan konto?{" "}
+          <Link to="/login" className="text-gold hover:underline">
+            Logga in
+          </Link>
         </p>
       </div>
     </div>

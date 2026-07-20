@@ -24,12 +24,12 @@ Demo dataset from the finished tournament: **104 matches · 1 028 predictions ·
 
 ## Screenshots
 
-| | |
-|---|---|
-| ![Landing](docs/screenshots/01-landing.png) | ![Matches](docs/screenshots/02-matches.png) |
+|                                                                   |                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------ |
+| ![Landing](docs/screenshots/01-landing.png)                       | ![Matches](docs/screenshots/02-matches.png)            |
 | ![Predictions matrix](docs/screenshots/03-predictions-matrix.png) | ![Tournament tree](docs/screenshots/04-tournament.png) |
-| ![Leaderboard](docs/screenshots/05-leaderboard.png) | ![Summary / podium](docs/screenshots/06-summary.png) |
-| ![Admin panel](docs/screenshots/07-admin.png) | ![Bonus questions](docs/screenshots/08-bonus.png) |
+| ![Leaderboard](docs/screenshots/05-leaderboard.png)               | ![Summary / podium](docs/screenshots/06-summary.png)   |
+| ![Admin panel](docs/screenshots/07-admin.png)                     | ![Bonus questions](docs/screenshots/08-bonus.png)      |
 
 ---
 
@@ -49,15 +49,15 @@ Demo dataset from the finished tournament: **104 matches · 1 028 predictions ·
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| Framework | TanStack Start (React 19, Vite 7) on Cloudflare Workers |
-| Styling | Tailwind CSS v4 + shadcn/ui |
-| Backend / DB / Auth | Supabase (via Lovable Cloud) — Postgres, RLS, Realtime, Storage |
-| Match data | [football-data.org](https://www.football-data.org) (competition `WC`) |
-| Scheduling | `pg_cron` + `pg_net` hitting a public sync route |
-| Language | TypeScript |
-| Package manager | Bun |
+| Layer               | Choice                                                                |
+| ------------------- | --------------------------------------------------------------------- |
+| Framework           | TanStack Start (React 19, Vite 7) on Cloudflare Workers               |
+| Styling             | Tailwind CSS v4 + shadcn/ui                                           |
+| Backend / DB / Auth | Supabase (via Lovable Cloud) — Postgres, RLS, Realtime, Storage       |
+| Match data          | [football-data.org](https://www.football-data.org) (competition `WC`) |
+| Scheduling          | `pg_cron` + `pg_net` hitting a public sync route                      |
+| Language            | TypeScript                                                            |
+| Package manager     | Bun                                                                   |
 
 See [`docs/architecture.md`](./docs/architecture.md) for the full diagram and data model.
 

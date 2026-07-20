@@ -26,10 +26,14 @@ export function BottomNav() {
         {items.map(({ to, label, icon: Icon }) => {
           const active = loc.pathname.startsWith(to);
           return (
-            <Link key={to} to={to} className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium",
-              active ? "text-gold" : "text-muted-foreground"
-            )}>
+            <Link
+              key={to}
+              to={to}
+              className={cn(
+                "flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium",
+                active ? "text-gold" : "text-muted-foreground",
+              )}
+            >
               <Icon className="h-5 w-5" />
               <span>{label}</span>
             </Link>

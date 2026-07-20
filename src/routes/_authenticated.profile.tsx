@@ -24,14 +24,22 @@ function ProfilePage() {
     },
   });
 
-  useEffect(() => { if (profile) setName(profile.display_name ?? ""); }, [profile]);
+  useEffect(() => {
+    if (profile) setName(profile.display_name ?? "");
+  }, [profile]);
 
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("profiles").update({ display_name: name.trim() }).eq("id", user!.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ display_name: name.trim() })
+        .eq("id", user!.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Sparat"); qc.invalidateQueries({ queryKey: ["profile"] }); },
+    onSuccess: () => {
+      toast.success("Sparat");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -40,17 +48,30 @@ function ProfilePage() {
       if (file.size > 2_000_000) throw new Error("Max 2 MB");
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const path = `${user!.id}/avatar-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      const { error } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
       const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      const { error: updErr } = await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user!.id);
+      const { error: updErr } = await supabase
+        .from("profiles")
+        .update({ avatar_url: data.publicUrl })
+        .eq("id", user!.id);
       if (updErr) throw updErr;
     },
-    onSuccess: () => { toast.success("Profilbild uppdaterad"); qc.invalidateQueries(); },
+    onSuccess: () => {
+      toast.success("Profilbild uppdaterad");
+      qc.invalidateQueries();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const initials = (profile?.display_name ?? "?").split(" ").map((s: string) => s[0]).join("").slice(0, 2).toUpperCase();
+  const initials = (profile?.display_name ?? "?")
+    .split(" ")
+    .map((s: string) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="space-y-6">
@@ -79,7 +100,11 @@ function ProfilePage() {
           type="file"
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadAvatar.mutate(f); e.target.value = ""; }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) uploadAvatar.mutate(f);
+            e.target.value = "";
+          }}
         />
         <div>
           <div className="text-xl font-semibold">{profile?.display_name ?? "—"}</div>
@@ -92,18 +117,36 @@ function ProfilePage() {
       </div>
 
       <section className="rounded-xl border bg-card p-4">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Visningsnamn</label>
+        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Visningsnamn
+        </label>
         <div className="mt-2 flex gap-2">
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40}
-            className="h-10 flex-1 rounded-md border bg-background px-3" />
-          <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">Spara</Button>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={40}
+            className="h-10 flex-1 rounded-md border bg-background px-3"
+          />
+          <Button
+            onClick={() => save.mutate()}
+            disabled={save.isPending}
+            className="bg-gold text-gold-foreground hover:bg-gold/90"
+          >
+            Spara
+          </Button>
         </div>
       </section>
 
-      <Button variant="outline" className="w-full" onClick={async () => { await signOut(); navigate({ to: "/" }); }}>
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={async () => {
+          await signOut();
+          navigate({ to: "/" });
+        }}
+      >
         <LogOut className="mr-2 h-4 w-4" /> Logga ut
       </Button>
     </div>
   );
 }
-

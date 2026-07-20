@@ -67,9 +67,16 @@ export function MatchCard({ match, gameId, userId, prediction, lockAt, roundName
       const h = parseInt(home, 10);
       const a = parseInt(away, 10);
       if (isNaN(h) || isNaN(a) || h < 0 || a < 0) throw new Error("Ange siffror");
-      const { error } = await supabase.from("predictions").upsert({
-        game_id: gameId, user_id: userId, match_id: match.id, home_score: h, away_score: a,
-      }, { onConflict: "game_id,user_id,match_id" });
+      const { error } = await supabase.from("predictions").upsert(
+        {
+          game_id: gameId,
+          user_id: userId,
+          match_id: match.id,
+          home_score: h,
+          away_score: a,
+        },
+        { onConflict: "game_id,user_id,match_id" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -92,28 +99,40 @@ export function MatchCard({ match, gameId, userId, prediction, lockAt, roundName
       <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
         <span>
           {stageLabel}
-          {roundName && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">{roundName}</span>}
+          {roundName && (
+            <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">
+              {roundName}
+            </span>
+          )}
         </span>
         <div className="flex items-center gap-2">
           {!locked && !hasPrediction && (
-            <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-gold-foreground">Ej tippad</span>
+            <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-gold-foreground">
+              Ej tippad
+            </span>
           )}
           <span>{format(kickoff, "EEE d MMM HH:mm", { locale: sv })}</span>
           <StatusBadge status={match.status} kickoffAt={match.kickoff_at} />
         </div>
       </div>
       <div className="mb-3 text-[11px] text-muted-foreground">
-        Sista tipp: <span className="font-medium text-foreground/80">{format(deadline, "EEE d MMM HH:mm", { locale: sv })}</span>
+        Sista tipp:{" "}
+        <span className="font-medium text-foreground/80">
+          {format(deadline, "EEE d MMM HH:mm", { locale: sv })}
+        </span>
       </div>
-
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <TeamSide team={match.home} align="right" />
         <div className="text-center">
           {finished ? (
-            <div className="text-2xl font-bold tabular-nums">{match.home_score}–{match.away_score}</div>
+            <div className="text-2xl font-bold tabular-nums">
+              {match.home_score}–{match.away_score}
+            </div>
           ) : match.status === "live" ? (
-            <div className="text-2xl font-bold tabular-nums text-live">{match.home_score ?? 0}–{match.away_score ?? 0}</div>
+            <div className="text-2xl font-bold tabular-nums text-live">
+              {match.home_score ?? 0}–{match.away_score ?? 0}
+            </div>
           ) : (
             <div className="text-sm text-muted-foreground">vs</div>
           )}
@@ -123,18 +142,32 @@ export function MatchCard({ match, gameId, userId, prediction, lockAt, roundName
 
       <div className="mt-4 rounded-lg bg-muted/50 p-3">
         {locked ? (
-          <LockedView prediction={prediction ?? null} finished={finished} points={points ?? null} match={match} />
+          <LockedView
+            prediction={prediction ?? null}
+            finished={finished}
+            points={points ?? null}
+            match={match}
+          />
         ) : (
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col">
-              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Ditt tips</div>
-              {countdown && <div className="mt-0.5 text-[10px] font-medium text-gold">{countdown}</div>}
+              <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Ditt tips
+              </div>
+              {countdown && (
+                <div className="mt-0.5 text-[10px] font-medium text-gold">{countdown}</div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <ScoreInput value={home} onChange={setHome} />
               <span className="text-muted-foreground">–</span>
               <ScoreInput value={away} onChange={setAway} />
-              <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
+              <Button
+                size="sm"
+                onClick={() => save.mutate()}
+                disabled={save.isPending}
+                className="bg-gold text-gold-foreground hover:bg-gold/90"
+              >
                 {save.isPending ? "..." : "Spara"}
               </Button>
             </div>
@@ -161,7 +194,9 @@ function TeamForm({ match }: { match: MatchRow }) {
       const ids = [homeId!, awayId!];
       const { data: rows, error } = await supabase
         .from("matches")
-        .select("id, kickoff_at, home_score, away_score, status, home:teams!matches_home_team_id_fkey(id,code,name), away:teams!matches_away_team_id_fkey(id,code,name)")
+        .select(
+          "id, kickoff_at, home_score, away_score, status, home:teams!matches_home_team_id_fkey(id,code,name), away:teams!matches_away_team_id_fkey(id,code,name)",
+        )
         .or(`home_team_id.in.(${ids.join(",")}),away_team_id.in.(${ids.join(",")})`)
         .eq("status", "finished")
         .neq("id", match.id)
@@ -187,26 +222,53 @@ function TeamForm({ match }: { match: MatchRow }) {
       </button>
       {open && (
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <TeamFormColumn teamId={homeId} teamName={match.home.name} matches={data?.home ?? []} loading={isLoading} />
-          <TeamFormColumn teamId={awayId} teamName={match.away.name} matches={data?.away ?? []} loading={isLoading} />
+          <TeamFormColumn
+            teamId={homeId}
+            teamName={match.home.name}
+            matches={data?.home ?? []}
+            loading={isLoading}
+          />
+          <TeamFormColumn
+            teamId={awayId}
+            teamName={match.away.name}
+            matches={data?.away ?? []}
+            loading={isLoading}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function TeamFormColumn({ teamId, teamName, matches, loading }: {
-  teamId: string; teamName: string;
-  matches: Array<{ id: string; kickoff_at: string; home_score: number | null; away_score: number | null; home: any; away: any }>;
+function TeamFormColumn({
+  teamId,
+  teamName,
+  matches,
+  loading,
+}: {
+  teamId: string;
+  teamName: string;
+  matches: Array<{
+    id: string;
+    kickoff_at: string;
+    home_score: number | null;
+    away_score: number | null;
+    home: any;
+    away: any;
+  }>;
   loading: boolean;
 }) {
   return (
     <div className="rounded-lg border bg-background/40 p-2">
-      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{teamName} · Senaste</div>
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {teamName} · Senaste
+      </div>
       {loading ? (
         <div className="py-2 text-center text-[11px] text-muted-foreground">Laddar…</div>
       ) : matches.length === 0 ? (
-        <div className="py-2 text-center text-[11px] text-muted-foreground">Inga tidigare matcher</div>
+        <div className="py-2 text-center text-[11px] text-muted-foreground">
+          Inga tidigare matcher
+        </div>
       ) : (
         <div className="space-y-1">
           {matches.map((m) => {
@@ -214,15 +276,28 @@ function TeamFormColumn({ teamId, teamName, matches, loading }: {
             const teamScore = isHome ? m.home_score : m.away_score;
             const oppScore = isHome ? m.away_score : m.home_score;
             const opp = isHome ? m.away : m.home;
-            const result = teamScore == null || oppScore == null
-              ? "?" : teamScore > oppScore ? "V" : teamScore < oppScore ? "F" : "O";
+            const result =
+              teamScore == null || oppScore == null
+                ? "?"
+                : teamScore > oppScore
+                  ? "V"
+                  : teamScore < oppScore
+                    ? "F"
+                    : "O";
             const resultClass =
-              result === "V" ? "bg-success/20 text-success" :
-              result === "F" ? "bg-destructive/20 text-destructive" :
-              "bg-muted text-muted-foreground";
+              result === "V"
+                ? "bg-success/20 text-success"
+                : result === "F"
+                  ? "bg-destructive/20 text-destructive"
+                  : "bg-muted text-muted-foreground";
             return (
               <div key={m.id} className="flex items-center gap-2 text-[11px]">
-                <span className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold", resultClass)}>
+                <span
+                  className={cn(
+                    "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold",
+                    resultClass,
+                  )}
+                >
                   {result}
                 </span>
                 <TeamFlag code={opp?.code} label={opp?.name} className="h-3 w-4" />
@@ -239,7 +314,17 @@ function TeamFormColumn({ teamId, teamName, matches, loading }: {
   );
 }
 
-function AllPicks({ matchId, gameId, finished, match }: { matchId: string; gameId: string; finished: boolean; match: MatchRow }) {
+function AllPicks({
+  matchId,
+  gameId,
+  finished,
+  match,
+}: {
+  matchId: string;
+  gameId: string;
+  finished: boolean;
+  match: MatchRow;
+}) {
   const [open, setOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -257,7 +342,10 @@ function AllPicks({ matchId, gameId, finished, match }: { matchId: string; gameI
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, display_name, avatar_url")
-        .in("id", list.map((p) => p.user_id));
+        .in(
+          "id",
+          list.map((p) => p.user_id),
+        );
       const map = new Map((profiles ?? []).map((p: any) => [p.id, p]));
       return list
         .map((p) => ({ ...p, profile: map.get(p.user_id) ?? null }))
@@ -291,14 +379,21 @@ function AllPicks({ matchId, gameId, finished, match }: { matchId: string; gameI
               </thead>
               <tbody>
                 {data.map((p) => {
-                  const exact = finished && p.home_score === match.home_score && p.away_score === match.away_score;
+                  const exact =
+                    finished &&
+                    p.home_score === match.home_score &&
+                    p.away_score === match.away_score;
                   return (
                     <tr key={p.user_id} className="border-t">
                       <td className="px-3 py-1.5">
                         <div className="flex items-center gap-2">
                           <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-muted">
                             {p.profile?.avatar_url ? (
-                              <img src={p.profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                              <img
+                                src={p.profile.avatar_url}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center text-[9px] font-bold text-muted-foreground">
                                 {(p.profile?.display_name ?? "??").slice(0, 2).toUpperCase()}
@@ -308,15 +403,26 @@ function AllPicks({ matchId, gameId, finished, match }: { matchId: string; gameI
                           <span className="font-medium">{p.profile?.display_name ?? "Okänd"}</span>
                         </div>
                       </td>
-                      <td className={cn("px-3 py-1.5 text-center font-bold tabular-nums", exact && "text-gold")}>
+                      <td
+                        className={cn(
+                          "px-3 py-1.5 text-center font-bold tabular-nums",
+                          exact && "text-gold",
+                        )}
+                      >
                         {p.home_score}–{p.away_score}
                       </td>
                       {finished && (
                         <td className="px-3 py-1.5 text-right">
-                          <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-bold",
-                            p.points === 3 ? "bg-gold text-gold-foreground" :
-                            p.points === 1 ? "bg-success/20 text-success" :
-                            "bg-muted text-muted-foreground")}>
+                          <span
+                            className={cn(
+                              "inline-block rounded-full px-2 py-0.5 text-xs font-bold",
+                              p.points === 3
+                                ? "bg-gold text-gold-foreground"
+                                : p.points === 1
+                                  ? "bg-success/20 text-success"
+                                  : "bg-muted text-muted-foreground",
+                            )}
+                          >
                             {p.points ?? 0}
                           </span>
                         </td>
@@ -335,13 +441,19 @@ function AllPicks({ matchId, gameId, finished, match }: { matchId: string; gameI
 
 function TeamSide({ team, align }: { team: MatchRow["home"]; align: "left" | "right" }) {
   return (
-    <div className={cn("flex items-center gap-2", align === "right" ? "justify-end" : "justify-start")}>
-      {align === "left" && <TeamFlag code={team.code} label={`${team.name} flagga`} className="h-6 w-8" />}
+    <div
+      className={cn("flex items-center gap-2", align === "right" ? "justify-end" : "justify-start")}
+    >
+      {align === "left" && (
+        <TeamFlag code={team.code} label={`${team.name} flagga`} className="h-6 w-8" />
+      )}
       <div className={cn(align === "right" ? "text-right" : "text-left")}>
         <div className="font-semibold leading-tight">{team.name}</div>
         <div className="text-xs text-muted-foreground">{team.code}</div>
       </div>
-      {align === "right" && <TeamFlag code={team.code} label={`${team.name} flagga`} className="h-6 w-8" />}
+      {align === "right" && (
+        <TeamFlag code={team.code} label={`${team.name} flagga`} className="h-6 w-8" />
+      )}
     </div>
   );
 }
@@ -349,34 +461,64 @@ function TeamSide({ team, align }: { team: MatchRow["home"]; align: "left" | "ri
 function ScoreInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <input
-      type="number" min={0} max={30} inputMode="numeric"
-      value={value} onChange={(e) => onChange(e.target.value)}
+      type="number"
+      min={0}
+      max={30}
+      inputMode="numeric"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
       className="h-10 w-12 rounded-md border bg-background text-center text-lg font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
     />
   );
 }
 
-function LockedView({ prediction, finished, points, match }: { prediction: { home_score: number; away_score: number } | null; finished: boolean; points: number | null; match: MatchRow }) {
+function LockedView({
+  prediction,
+  finished,
+  points,
+  match,
+}: {
+  prediction: { home_score: number; away_score: number } | null;
+  finished: boolean;
+  points: number | null;
+  match: MatchRow;
+}) {
   if (!prediction) {
-    return <div className="text-center text-xs text-muted-foreground">Du tippade inte denna match</div>;
+    return (
+      <div className="text-center text-xs text-muted-foreground">Du tippade inte denna match</div>
+    );
   }
   return (
     <div className="flex items-center justify-between gap-3">
       <div>
-        <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Ditt tips</div>
-        <div className="text-lg font-bold tabular-nums">{prediction.home_score}–{prediction.away_score}</div>
+        <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          Ditt tips
+        </div>
+        <div className="text-lg font-bold tabular-nums">
+          {prediction.home_score}–{prediction.away_score}
+        </div>
       </div>
       {finished && (
         <div className="text-right">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Resultat</div>
-          <div className="text-lg font-bold tabular-nums">{match.home_score}–{match.away_score}</div>
+          <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Resultat
+          </div>
+          <div className="text-lg font-bold tabular-nums">
+            {match.home_score}–{match.away_score}
+          </div>
         </div>
       )}
       {finished && (
-        <div className={cn("rounded-full px-3 py-1 text-sm font-bold",
-          points === 3 ? "bg-gold text-gold-foreground" :
-          points === 1 ? "bg-success/20 text-success" :
-          "bg-muted text-muted-foreground")}>
+        <div
+          className={cn(
+            "rounded-full px-3 py-1 text-sm font-bold",
+            points === 3
+              ? "bg-gold text-gold-foreground"
+              : points === 1
+                ? "bg-success/20 text-success"
+                : "bg-muted text-muted-foreground",
+          )}
+        >
           {points ?? 0} p
         </div>
       )}

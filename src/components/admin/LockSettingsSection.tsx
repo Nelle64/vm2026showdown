@@ -13,7 +13,11 @@ export function LockSettingsSection({ gameId }: { gameId: string }) {
   const { data: game } = useQuery({
     queryKey: ["game-lockmode-admin", gameId],
     queryFn: async () => {
-      const { data } = await supabase.from("games").select("lock_mode").eq("id", gameId).maybeSingle();
+      const { data } = await supabase
+        .from("games")
+        .select("lock_mode")
+        .eq("id", gameId)
+        .maybeSingle();
       return data as { lock_mode: GameLockMode } | null;
     },
   });
@@ -57,7 +61,17 @@ export function LockSettingsSection({ gameId }: { gameId: string }) {
   );
 }
 
-function ModeOption({ active, title, description, onClick }: { active: boolean; title: string; description: string; onClick: () => void }) {
+function ModeOption({
+  active,
+  title,
+  description,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -114,16 +128,24 @@ function RoundsManager({ gameId }: { gameId: string }) {
           placeholder="Ex. Gruppspel omgång 1"
           className="h-10 flex-1 rounded-md border bg-background px-3"
         />
-        <Button onClick={() => createRound.mutate()} disabled={createRound.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
+        <Button
+          onClick={() => createRound.mutate()}
+          disabled={createRound.isPending}
+          className="bg-gold text-gold-foreground hover:bg-gold/90"
+        >
           <Plus className="mr-1 h-4 w-4" /> Skapa
         </Button>
       </div>
 
       {!rounds?.length ? (
-        <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">Inga omgångar än.</div>
+        <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+          Inga omgångar än.
+        </div>
       ) : (
         <div className="space-y-2">
-          {rounds.map((r: any) => <RoundRow key={r.id} round={r} gameId={gameId} />)}
+          {rounds.map((r: any) => (
+            <RoundRow key={r.id} round={r} gameId={gameId} />
+          ))}
         </div>
       )}
     </div>
@@ -134,7 +156,7 @@ function RoundRow({ round, gameId }: { round: any; gameId: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [lockAtLocal, setLockAtLocal] = useState<string>(
-    round.lock_at ? toLocalInput(round.lock_at) : ""
+    round.lock_at ? toLocalInput(round.lock_at) : "",
   );
 
   const update = useMutation({
@@ -176,9 +198,17 @@ function RoundRow({ round, gameId }: { round: any; gameId: string }) {
         <button onClick={() => setOpen(!open)} className="flex flex-1 items-center gap-2 text-left">
           {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <span className="font-medium">{round.name}</span>
-          <span className="text-xs text-muted-foreground">{matchCount} {matchCount === 1 ? "match" : "matcher"}</span>
+          <span className="text-xs text-muted-foreground">
+            {matchCount} {matchCount === 1 ? "match" : "matcher"}
+          </span>
         </button>
-        <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Ta bort "${round.name}"?`)) del.mutate(); }}>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => {
+            if (confirm(`Ta bort "${round.name}"?`)) del.mutate();
+          }}
+        >
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </div>
@@ -187,7 +217,12 @@ function RoundRow({ round, gameId }: { round: any; gameId: string }) {
         <div className="space-y-3 border-t p-3">
           <div>
             <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Låstid {!lockAtLocal && <span className="ml-1 normal-case text-[10px] text-gold">(tom = 1 min före första match)</span>}
+              Låstid{" "}
+              {!lockAtLocal && (
+                <span className="ml-1 normal-case text-[10px] text-gold">
+                  (tom = 1 min före första match)
+                </span>
+              )}
             </label>
             <div className="mt-1 flex gap-2">
               <input
@@ -196,9 +231,18 @@ function RoundRow({ round, gameId }: { round: any; gameId: string }) {
                 onChange={(e) => setLockAtLocal(e.target.value)}
                 className="h-9 flex-1 rounded-md border bg-background px-2 text-sm"
               />
-              <Button size="sm" onClick={saveLockAt}>Spara</Button>
+              <Button size="sm" onClick={saveLockAt}>
+                Spara
+              </Button>
               {lockAtLocal && (
-                <Button size="sm" variant="ghost" onClick={() => { setLockAtLocal(""); update.mutate({ lock_at: null }); }}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setLockAtLocal("");
+                    update.mutate({ lock_at: null });
+                  }}
+                >
                   Auto
                 </Button>
               )}
@@ -218,8 +262,11 @@ function MatchPicker({ roundId, gameId }: { roundId: string; gameId: string }) {
   const { data: matches } = useQuery({
     queryKey: ["picker-matches"],
     queryFn: async () => {
-      const { data } = await supabase.from("matches")
-        .select("id, kickoff_at, stage, group_letter, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)")
+      const { data } = await supabase
+        .from("matches")
+        .select(
+          "id, kickoff_at, stage, group_letter, home:teams!matches_home_team_id_fkey(code,flag_emoji), away:teams!matches_away_team_id_fkey(code,flag_emoji)",
+        )
         .order("kickoff_at");
       return data ?? [];
     },
@@ -228,7 +275,8 @@ function MatchPicker({ roundId, gameId }: { roundId: string; gameId: string }) {
   const { data: assigned } = useQuery({
     queryKey: ["picker-assigned", gameId],
     queryFn: async () => {
-      const { data } = await supabase.from("round_matches")
+      const { data } = await supabase
+        .from("round_matches")
         .select("match_id, round_id")
         .eq("game_id", gameId);
       const map = new Map<string, string>(); // matchId -> roundId
@@ -243,12 +291,22 @@ function MatchPicker({ roundId, gameId }: { roundId: string; gameId: string }) {
         // ta bort eventuell befintlig tilldelning i annan omgång, lägg sedan till
         const existing = assigned?.get(matchId);
         if (existing && existing !== roundId) {
-          await supabase.from("round_matches").delete().eq("game_id", gameId).eq("match_id", matchId);
+          await supabase
+            .from("round_matches")
+            .delete()
+            .eq("game_id", gameId)
+            .eq("match_id", matchId);
         }
-        const { error } = await supabase.from("round_matches").insert({ round_id: roundId, match_id: matchId, game_id: gameId });
+        const { error } = await supabase
+          .from("round_matches")
+          .insert({ round_id: roundId, match_id: matchId, game_id: gameId });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("round_matches").delete().eq("round_id", roundId).eq("match_id", matchId);
+        const { error } = await supabase
+          .from("round_matches")
+          .delete()
+          .eq("round_id", roundId)
+          .eq("match_id", matchId);
         if (error) throw error;
       }
     },
@@ -262,7 +320,9 @@ function MatchPicker({ roundId, gameId }: { roundId: string; gameId: string }) {
 
   return (
     <div>
-      <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Matcher i omgången</div>
+      <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Matcher i omgången
+      </div>
       <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border bg-card p-2">
         {matches?.map((m: any) => {
           const inThis = assigned?.get(m.id) === roundId;
@@ -289,7 +349,12 @@ function MatchPicker({ roundId, gameId }: { roundId: string; gameId: string }) {
                 <TeamFlag code={m.away?.code} className="h-4 w-6" />
               </span>
               <span className="shrink-0 text-[10px] text-muted-foreground">
-                {new Date(m.kickoff_at).toLocaleString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                {new Date(m.kickoff_at).toLocaleString("sv-SE", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </span>
               {inOther && <span className="text-[10px] text-muted-foreground">(annan omg.)</span>}
             </label>

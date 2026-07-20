@@ -4,10 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { MatchCard, type MatchRow } from "@/components/MatchCard";
 import { useGameLock } from "@/lib/use-game-lock";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useMemo } from "react";
 
-export const Route = createFileRoute("/_authenticated/games/$gameId/my-picks")({ component: MyPicksPage });
+export const Route = createFileRoute("/_authenticated/games/$gameId/my-picks")({
+  component: MyPicksPage,
+});
 
 interface PickRow {
   match_id: string;
@@ -25,9 +32,13 @@ function MyPicksPage() {
   const { data } = useQuery({
     queryKey: ["my-picks", gameId, user!.id],
     queryFn: async () => {
-      const { data: preds, error } = await supabase.from("predictions")
-        .select("match_id, home_score, away_score, points, match:matches(id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,code,name,flag_emoji), away:teams!matches_away_team_id_fkey(id,code,name,flag_emoji))")
-        .eq("game_id", gameId).eq("user_id", user!.id);
+      const { data: preds, error } = await supabase
+        .from("predictions")
+        .select(
+          "match_id, home_score, away_score, points, match:matches(id, kickoff_at, status, home_score, away_score, stage, group_letter, home:teams!matches_home_team_id_fkey(id,code,name,flag_emoji), away:teams!matches_away_team_id_fkey(id,code,name,flag_emoji))",
+        )
+        .eq("game_id", gameId)
+        .eq("user_id", user!.id);
       if (error) throw error;
       return preds as unknown as PickRow[];
     },
@@ -52,7 +63,9 @@ function MyPicksPage() {
 
   const defaultOpen = useMemo(() => {
     const now = Date.now();
-    const next = groups.find((g) => g.list.some((p) => new Date(p.match!.kickoff_at).getTime() > now));
+    const next = groups.find((g) =>
+      g.list.some((p) => new Date(p.match!.kickoff_at).getTime() > now),
+    );
     return next?.name ? [next.name] : groups[0]?.name ? [groups[0].name] : [];
   }, [groups]);
 
@@ -66,7 +79,9 @@ function MyPicksPage() {
       </div>
 
       {!data?.length ? (
-        <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">Du har inte tippat något ännu.</div>
+        <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+          Du har inte tippat något ännu.
+        </div>
       ) : (
         <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-2">
           {groups.map((g) => {
@@ -84,9 +99,19 @@ function MyPicksPage() {
                 <AccordionContent>
                   <div className="space-y-3 pb-2">
                     {g.list.map((p) => (
-                      <MatchCard key={p.match_id} match={p.match as MatchRow} gameId={gameId} userId={user!.id}
-                        prediction={{ home_score: p.home_score, away_score: p.away_score, points: p.points }}
-                        lockAt={getLockAt(p.match_id)} roundName={getRoundName(p.match_id)} />
+                      <MatchCard
+                        key={p.match_id}
+                        match={p.match as MatchRow}
+                        gameId={gameId}
+                        userId={user!.id}
+                        prediction={{
+                          home_score: p.home_score,
+                          away_score: p.away_score,
+                          points: p.points,
+                        }}
+                        lockAt={getLockAt(p.match_id)}
+                        roundName={getRoundName(p.match_id)}
+                      />
                     ))}
                   </div>
                 </AccordionContent>
@@ -107,7 +132,9 @@ function fallbackBucket(m: MatchRow): string {
 function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div className={"rounded-xl border bg-card p-3 " + (highlight ? "border-gold/40" : "")}>
-      <div className={"text-2xl font-bold tabular-nums " + (highlight ? "text-gold" : "")}>{value}</div>
+      <div className={"text-2xl font-bold tabular-nums " + (highlight ? "text-gold" : "")}>
+        {value}
+      </div>
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
     </div>
   );

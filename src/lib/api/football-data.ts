@@ -15,12 +15,14 @@ export function footballDataProvider(apiKey: string): FootballProvider {
       const res = await fetch(`${BASE}/competitions/${COMP}/teams`, { headers });
       if (!res.ok) throw new Error(`football-data teams ${res.status}: ${await res.text()}`);
       const json = await res.json();
-      return (json.teams ?? []).map((t: any): ApiTeam => ({
-        externalId: String(t.id),
-        code: t.tla ?? (t.shortName ?? t.name).slice(0, 3).toUpperCase(),
-        name: t.shortName ?? t.name,
-        flag: flagFromTla(t.tla),
-      }));
+      return (json.teams ?? []).map(
+        (t: any): ApiTeam => ({
+          externalId: String(t.id),
+          code: t.tla ?? (t.shortName ?? t.name).slice(0, 3).toUpperCase(),
+          name: t.shortName ?? t.name,
+          flag: flagFromTla(t.tla),
+        }),
+      );
     },
     async fetchMatches() {
       const res = await fetch(`${BASE}/competitions/${COMP}/matches`, { headers });
@@ -36,8 +38,12 @@ export function footballDataProvider(apiKey: string): FootballProvider {
         const awayScore = reg?.away ?? ft?.away ?? null;
         return {
           externalId: String(m.id),
-          homeTeamCode: m.homeTeam?.tla ?? (m.homeTeam?.shortName ?? m.homeTeam?.name ?? "").slice(0, 3).toUpperCase(),
-          awayTeamCode: m.awayTeam?.tla ?? (m.awayTeam?.shortName ?? m.awayTeam?.name ?? "").slice(0, 3).toUpperCase(),
+          homeTeamCode:
+            m.homeTeam?.tla ??
+            (m.homeTeam?.shortName ?? m.homeTeam?.name ?? "").slice(0, 3).toUpperCase(),
+          awayTeamCode:
+            m.awayTeam?.tla ??
+            (m.awayTeam?.shortName ?? m.awayTeam?.name ?? "").slice(0, 3).toUpperCase(),
           kickoffISO: m.utcDate,
           status: mapStatus(m.status),
           homeScore,

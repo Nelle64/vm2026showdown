@@ -24,12 +24,12 @@ Demodata från det avslutade mästerskapet: **104 matcher · 1 028 tips · 10 sp
 
 ## Skärmbilder
 
-| | |
-|---|---|
-| ![Landing](docs/screenshots/01-landing.png) | ![Matcher](docs/screenshots/02-matches.png) |
+|                                                           |                                                       |
+| --------------------------------------------------------- | ----------------------------------------------------- |
+| ![Landing](docs/screenshots/01-landing.png)               | ![Matcher](docs/screenshots/02-matches.png)           |
 | ![Allas tips](docs/screenshots/03-predictions-matrix.png) | ![Turneringsträd](docs/screenshots/04-tournament.png) |
-| ![Leaderboard](docs/screenshots/05-leaderboard.png) | ![Summering](docs/screenshots/06-summary.png) |
-| ![Adminpanel](docs/screenshots/07-admin.png) | ![Bonusfrågor](docs/screenshots/08-bonus.png) |
+| ![Leaderboard](docs/screenshots/05-leaderboard.png)       | ![Summering](docs/screenshots/06-summary.png)         |
+| ![Adminpanel](docs/screenshots/07-admin.png)              | ![Bonusfrågor](docs/screenshots/08-bonus.png)         |
 
 ---
 

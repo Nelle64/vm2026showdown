@@ -33,16 +33,24 @@ function GamesPage() {
   const createGame = useMutation({
     mutationFn: async () => {
       if (!name.trim()) throw new Error("Ange ett namn");
-      const { data, error } = await supabase.from("games").insert({
-        name: name.trim(), description: desc.trim() || null, owner_id: user!.id,
-      }).select().single();
+      const { data, error } = await supabase
+        .from("games")
+        .insert({
+          name: name.trim(),
+          description: desc.trim() || null,
+          owner_id: user!.id,
+        })
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },
     onSuccess: (g) => {
       toast.success("Spel skapat");
       qc.invalidateQueries({ queryKey: ["my-games"] });
-      setMode("none"); setName(""); setDesc("");
+      setMode("none");
+      setName("");
+      setDesc("");
       navigate({ to: `/games/${g.id}/matches` });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -54,16 +62,23 @@ function GamesPage() {
       if (!trimmed) throw new Error("Ange en kod");
       const { data, error } = await supabase.rpc("request_join_by_code", { _code: trimmed });
       if (error) {
-        if (error.message.includes("invalid code")) throw new Error("Hittade inget spel med den koden");
+        if (error.message.includes("invalid code"))
+          throw new Error("Hittade inget spel med den koden");
         throw error;
       }
       const row = Array.isArray(data) ? data[0] : data;
-      return row as { game_id: string; game_name: string; status: "pending" | "approved" | "rejected"; already_member: boolean };
+      return row as {
+        game_id: string;
+        game_name: string;
+        status: "pending" | "approved" | "rejected";
+        already_member: boolean;
+      };
     },
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["my-games"] });
       qc.invalidateQueries({ queryKey: ["my-requests"] });
-      setMode("none"); setCode("");
+      setMode("none");
+      setCode("");
       if (r.already_member || r.status === "approved") {
         toast.success("Du är med!");
         navigate({ to: `/games/${r.game_id}/matches` });
@@ -93,7 +108,10 @@ function GamesPage() {
       const { error } = await supabase.from("game_join_requests").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Ansökan tillbakadragen"); qc.invalidateQueries({ queryKey: ["my-requests"] }); },
+    onSuccess: () => {
+      toast.success("Ansökan tillbakadragen");
+      qc.invalidateQueries({ queryKey: ["my-requests"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -101,13 +119,18 @@ function GamesPage() {
     <div>
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-gold">VM-tipset 2026</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-gold">
+            VM-tipset 2026
+          </div>
           <h1 className="mt-1 text-3xl font-bold">Mina spel</h1>
         </div>
       </header>
 
       <div className="mb-6 grid grid-cols-2 gap-2">
-        <Button onClick={() => setMode("create")} className="h-12 bg-gold text-gold-foreground hover:bg-gold/90">
+        <Button
+          onClick={() => setMode("create")}
+          className="h-12 bg-gold text-gold-foreground hover:bg-gold/90"
+        >
           <Plus className="mr-1 h-4 w-4" /> Skapa spel
         </Button>
         <Button onClick={() => setMode("join")} variant="outline" className="h-12">
@@ -119,15 +142,31 @@ function GamesPage() {
         <div className="mb-4 rounded-xl border bg-card p-4">
           <h3 className="mb-3 font-semibold">Nytt spel</h3>
           <div className="space-y-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Namn på spelet" maxLength={60}
-              className="h-11 w-full rounded-md border bg-background px-3" />
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Beskrivning (valfri)" maxLength={200}
-              className="min-h-[60px] w-full rounded-md border bg-background px-3 py-2" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Namn på spelet"
+              maxLength={60}
+              className="h-11 w-full rounded-md border bg-background px-3"
+            />
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              placeholder="Beskrivning (valfri)"
+              maxLength={200}
+              className="min-h-[60px] w-full rounded-md border bg-background px-3 py-2"
+            />
             <div className="flex gap-2">
-              <Button onClick={() => createGame.mutate()} disabled={createGame.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
+              <Button
+                onClick={() => createGame.mutate()}
+                disabled={createGame.isPending}
+                className="bg-gold text-gold-foreground hover:bg-gold/90"
+              >
                 {createGame.isPending ? "Skapar..." : "Skapa"}
               </Button>
-              <Button variant="ghost" onClick={() => setMode("none")}>Avbryt</Button>
+              <Button variant="ghost" onClick={() => setMode("none")}>
+                Avbryt
+              </Button>
             </div>
           </div>
         </div>
@@ -136,25 +175,45 @@ function GamesPage() {
       {mode === "join" && (
         <div className="mb-4 rounded-xl border bg-card p-4">
           <h3 className="mb-1 font-semibold">Ansök via kod</h3>
-          <p className="mb-3 text-xs text-muted-foreground">Admin för spelet godkänner din ansökan.</p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Admin för spelet godkänner din ansökan.
+          </p>
           <div className="flex gap-2">
-            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ABCD1234" maxLength={16}
-              className="h-11 flex-1 rounded-md border bg-background px-3 font-mono uppercase tracking-wider" />
-            <Button onClick={() => joinGame.mutate()} disabled={joinGame.isPending} className="bg-gold text-gold-foreground hover:bg-gold/90">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="ABCD1234"
+              maxLength={16}
+              className="h-11 flex-1 rounded-md border bg-background px-3 font-mono uppercase tracking-wider"
+            />
+            <Button
+              onClick={() => joinGame.mutate()}
+              disabled={joinGame.isPending}
+              className="bg-gold text-gold-foreground hover:bg-gold/90"
+            >
               Ansök
             </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setMode("none")} className="mt-2">Avbryt</Button>
+          <Button variant="ghost" size="sm" onClick={() => setMode("none")} className="mt-2">
+            Avbryt
+          </Button>
         </div>
       )}
 
       {myRequests && myRequests.length > 0 && (
         <div className="mb-4 space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mina ansökningar</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Mina ansökningar
+          </div>
           {myRequests.map((r: any) => (
-            <div key={r.id} className="flex items-center justify-between rounded-lg border bg-card p-3 text-sm">
+            <div
+              key={r.id}
+              className="flex items-center justify-between rounded-lg border bg-card p-3 text-sm"
+            >
               <div>
-                <div className="font-mono text-xs text-muted-foreground">Spel-ID: {r.game_id.slice(0, 8)}...</div>
+                <div className="font-mono text-xs text-muted-foreground">
+                  Spel-ID: {r.game_id.slice(0, 8)}...
+                </div>
                 <div className={r.status === "pending" ? "text-gold" : "text-destructive"}>
                   {r.status === "pending" ? "Väntar på godkännande" : "Avvisad"}
                 </div>
@@ -172,32 +231,44 @@ function GamesPage() {
       ) : !games?.length ? (
         <div className="rounded-xl border border-dashed bg-card/50 p-8 text-center">
           <Users className="mx-auto h-10 w-10 text-muted-foreground" />
-          <p className="mt-3 text-sm text-muted-foreground">Du är inte med i något spel än. Skapa ett nytt eller gå med via kod.</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Du är inte med i något spel än. Skapa ett nytt eller gå med via kod.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
-          {games.map((m: any) => m.game && (
-            <div key={m.game.id} className="group flex items-center justify-between rounded-xl border bg-card p-4 transition hover:border-gold/40">
-              <Link to={`/games/${m.game.id}/matches`} className="min-w-0 flex-1">
-                <div className="font-semibold">{m.game.name}</div>
-                {m.game.description && <div className="text-sm text-muted-foreground">{m.game.description}</div>}
-                <div className="mt-1 text-xs text-muted-foreground">Kod: <span className="font-mono text-gold">{m.game.invite_code}</span></div>
-              </Link>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  const url = `${window.location.origin}/join/${m.game.invite_code}`;
-                  navigator.clipboard.writeText(url);
-                  toast.success("Invite-länk kopierad");
-                }}
-                className="mr-1 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-gold"
-                title="Kopiera invite-länk"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          ))}
+          {games.map(
+            (m: any) =>
+              m.game && (
+                <div
+                  key={m.game.id}
+                  className="group flex items-center justify-between rounded-xl border bg-card p-4 transition hover:border-gold/40"
+                >
+                  <Link to={`/games/${m.game.id}/matches`} className="min-w-0 flex-1">
+                    <div className="font-semibold">{m.game.name}</div>
+                    {m.game.description && (
+                      <div className="text-sm text-muted-foreground">{m.game.description}</div>
+                    )}
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Kod: <span className="font-mono text-gold">{m.game.invite_code}</span>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const url = `${window.location.origin}/join/${m.game.invite_code}`;
+                      navigator.clipboard.writeText(url);
+                      toast.success("Invite-länk kopierad");
+                    }}
+                    className="mr-1 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-gold"
+                    title="Kopiera invite-länk"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+              ),
+          )}
         </div>
       )}
     </div>

@@ -25,6 +25,7 @@ Place in `docs/screenshots/` with these exact names so the README renders them:
 - [ ] `08-bonus.png`
 
 Tips:
+
 - Use the mobile viewport for at least half of them — this app is mobile-first.
 - Crop to content; no browser chrome.
 - Anonymise real names/avatars if any player didn't consent to public display.

@@ -18,11 +18,24 @@ function flagClassFromCode(code?: string | null) {
   return iso2 && iso2.length === 2 ? iso2.toLowerCase() : null;
 }
 
-export function TeamFlag({ code, label, className }: { code?: string | null; label?: string; className?: string }) {
+export function TeamFlag({
+  code,
+  label,
+  className,
+}: {
+  code?: string | null;
+  label?: string;
+  className?: string;
+}) {
   const flagCode = flagClassFromCode(code);
 
   if (!flagCode) {
-    return <span className={cn("inline-block h-4 w-6 rounded-sm bg-muted align-middle", className)} aria-label={label ?? code ?? "Flagga"} />;
+    return (
+      <span
+        className={cn("inline-block h-4 w-6 rounded-sm bg-muted align-middle", className)}
+        aria-label={label ?? code ?? "Flagga"}
+      />
+    );
   }
 
   return (
