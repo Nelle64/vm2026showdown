@@ -93,57 +93,65 @@ function SummaryPage() {
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fun facts</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <FactCard icon={<Target className="h-5 w-5" />} title="Mest exakta" subtitle="Flest 3-poängare"
-            winner={facts.mostExact} value={facts.mostExact && `${facts.mostExact.value} exakta`} tint="gold" />
+            winner={facts.mostExact} value={facts.mostExact && `${facts.mostExact.value} exakta`} tint="gold" ranking={facts.rankings.mostExact} />
           <FactCard icon={<Crosshair className="h-5 w-5" />} title="Bäst pricksäkerhet" subtitle="Andel exakt eller rätt utfall"
-            winner={facts.bestAccuracy} value={facts.bestAccuracy && `${facts.bestAccuracy.value}%`} tint="gold" />
+            winner={facts.bestAccuracy} value={facts.bestAccuracy && `${facts.bestAccuracy.value}%`} tint="gold" ranking={facts.rankings.bestAccuracy} />
           <FactCard icon={<Zap className="h-5 w-5" />} title="Snabbast på avtryckaren" subtitle="Först in med sitt tips flest gånger"
-            winner={facts.mostFirst} value={facts.mostFirst && `${facts.mostFirst.value} matcher först`} />
+            winner={facts.mostFirst} value={facts.mostFirst && `${facts.mostFirst.value} matcher först`} ranking={facts.rankings.mostFirst} />
           <FactCard icon={<Clock className="h-5 w-5" />} title="Sista minuten-tippare" subtitle="Kortast snittid före avspark"
-            winner={facts.latest} value={facts.latest && formatDuration(facts.latest.value)} />
+            winner={facts.latest} value={facts.latest && formatDuration(facts.latest.value)} ranking={facts.rankings.latest} />
           <FactCard icon={<Award className="h-5 w-5" />} title="Långtidsplanerare" subtitle="Längst snittid före avspark"
-            winner={facts.earliest} value={facts.earliest && formatDuration(facts.earliest.value)} />
+            winner={facts.earliest} value={facts.earliest && formatDuration(facts.earliest.value)} ranking={facts.rankings.earliest} />
           <FactCard icon={<Ghost className="h-5 w-5" />} title="Slarvern" subtitle="Missade flest matcher"
-            winner={facts.mostMissed} value={facts.mostMissed && `${facts.mostMissed.value} missade`} tint="muted" />
+            winner={facts.mostMissed} value={facts.mostMissed && `${facts.mostMissed.value} missade`} tint="muted" ranking={facts.rankings.mostMissed} />
           <FactCard icon={<Flame className="h-5 w-5" />} title="Målsnöret" subtitle="Flest tips 1 mål från exakt resultat"
-            winner={facts.mostNearMiss} value={facts.mostNearMiss && `${facts.mostNearMiss.value} nära`} />
+            winner={facts.mostNearMiss} value={facts.mostNearMiss && `${facts.mostNearMiss.value} nära`} ranking={facts.rankings.mostNearMiss} />
           <FactCard icon={<TrendingUp className="h-5 w-5" />} title="Optimisten" subtitle="Högst snitt mål per tips"
-            winner={facts.optimist} value={facts.optimist && `${facts.optimist.value.toFixed(2)} mål/tips`} />
+            winner={facts.optimist} value={facts.optimist && `${facts.optimist.value.toFixed(2)} mål/tips`} ranking={facts.rankings.optimist} />
           <FactCard icon={<TrendingDown className="h-5 w-5" />} title="Pessimisten" subtitle="Lägst snitt mål per tips"
-            winner={facts.pessimist} value={facts.pessimist && `${facts.pessimist.value.toFixed(2)} mål/tips`} />
+            winner={facts.pessimist} value={facts.pessimist && `${facts.pessimist.value.toFixed(2)} mål/tips`} ranking={facts.rankings.pessimist} />
           <FactCard icon={<Repeat className="h-5 w-5" />} title="Favoritresultatet" subtitle="Mest tippade slutresultatet totalt"
             winner={null} value={facts.favoriteScore && `${facts.favoriteScore.score} (${facts.favoriteScore.count} ggr)`} />
           <FactCard icon={<Trophy className="h-5 w-5" />} title="Bonuskungen" subtitle="Mest bonuspoäng (räknas separat)"
-            winner={facts.bonusKing} value={facts.bonusKing && `${facts.bonusKing.value} p`} tint="gold" />
+            winner={facts.bonusKing} value={facts.bonusKing && `${facts.bonusKing.value} p`} tint="gold" ranking={facts.rankings.bonusKing} />
           <FactCard icon={<Target className="h-5 w-5" />} title="Utfallsmästaren" subtitle="Flest rätt utfall (1p)"
-            winner={facts.mostOutcome} value={facts.mostOutcome && `${facts.mostOutcome.value} utfall`} />
+            winner={facts.mostOutcome} value={facts.mostOutcome && `${facts.mostOutcome.value} utfall`} ranking={facts.rankings.mostOutcome} />
           <FactCard icon={<Handshake className="h-5 w-5" />} title="Oavgjord-troende" subtitle="Störst andel oavgjorda tips"
-            winner={facts.drawLover} value={facts.drawLover && `${facts.drawLover.value}% oavgjorda`} />
+            winner={facts.drawLover} value={facts.drawLover && `${facts.drawLover.value}% oavgjorda`} ranking={facts.rankings.drawLover} />
           <FactCard icon={<Home className="h-5 w-5" />} title="Hemmasugen" subtitle="Störst andel hemmavinst-tips"
-            winner={facts.homer} value={facts.homer && `${facts.homer.value}% hemmavinst`} />
+            winner={facts.homer} value={facts.homer && `${facts.homer.value}% hemmavinst`} ranking={facts.rankings.homer} />
           <FactCard icon={<Plane className="h-5 w-5" />} title="Bortasugen" subtitle="Störst andel bortavinst-tips"
-            winner={facts.awayer} value={facts.awayer && `${facts.awayer.value}% bortavinst`} />
+            winner={facts.awayer} value={facts.awayer && `${facts.awayer.value}% bortavinst`} ranking={facts.rankings.awayer} />
           <FactCard icon={<Flame className="h-5 w-5" />} title="Het strimma" subtitle="Längst svit i rad med poäng"
-            winner={facts.hotStreak} value={facts.hotStreak && `${facts.hotStreak.value} matcher i rad`} tint="gold" />
+            winner={facts.hotStreak} value={facts.hotStreak && `${facts.hotStreak.value} matcher i rad`} tint="gold" ranking={facts.rankings.hotStreak} />
           <FactCard icon={<Snowflake className="h-5 w-5" />} title="Kall strimma" subtitle="Längst svit utan poäng"
-            winner={facts.coldStreak} value={facts.coldStreak && `${facts.coldStreak.value} matcher i rad`} tint="muted" />
+            winner={facts.coldStreak} value={facts.coldStreak && `${facts.coldStreak.value} matcher i rad`} tint="muted" ranking={facts.rankings.coldStreak} />
           <FactCard icon={<Users className="h-5 w-5" />} title="Tvillingarna" subtitle="Paret med flest identiska tips"
             winner={null} value={facts.twins && `${facts.twins.a} & ${facts.twins.b} – ${facts.twins.count} likadana`} />
           <FactCard icon={<Shield className="h-5 w-5" />} title="Kontrarian" subtitle="Flest unika resultat ingen annan tippade"
-            winner={facts.contrarian} value={facts.contrarian && `${facts.contrarian.value} unika`} />
+            winner={facts.contrarian} value={facts.contrarian && `${facts.contrarian.value} unika`} ranking={facts.rankings.contrarian} />
           <FactCard icon={<Swords className="h-5 w-5" />} title="Modigast exakta" subtitle="Rätt exakt resultat med flest mål"
             winner={facts.boldestExact} value={facts.boldestExact && facts.boldestExact.value} />
           <FactCard icon={<Star className="h-5 w-5" />} title="Kvällens match" subtitle="Match som gav flest 3-poängare"
             winner={null} value={facts.matchOfTournament ?? "—"} />
           <FactCard icon={<Compass className="h-5 w-5" />} title="Rebellen" subtitle="Tippade mest olikt alla andra"
-            winner={facts.mostDifferent} value={facts.mostDifferent && `${facts.mostDifferent.value}% olika`} />
+            winner={facts.mostDifferent} value={facts.mostDifferent && `${facts.mostDifferent.value}% olika`} ranking={facts.rankings.mostDifferent} />
           <FactCard icon={<UserX className="h-5 w-5" />} title="Ensamvargen" subtitle="Poäng när ingen annan fick något"
-            winner={facts.lonePoints} value={facts.lonePoints && `${facts.lonePoints.value} ensam-poäng`} tint="gold" />
+            winner={facts.lonePoints} value={facts.lonePoints && `${facts.lonePoints.value} ensam-poäng`} tint="gold" ranking={facts.rankings.lonePoints} />
           <FactCard icon={<Shuffle className="h-5 w-5" />} title="Rätt siffror – fel lag" subtitle="Tippade omvänt resultat (t.ex. 2–1 istället för 1–2)"
-            winner={facts.reversedScore} value={facts.reversedScore && `${facts.reversedScore.value} gånger`} />
+            winner={facts.reversedScore} value={facts.reversedScore && `${facts.reversedScore.value} gånger`} ranking={facts.rankings.reversedScore} />
           <FactCard icon={<Swords className="h-5 w-5" />} title="Mest emot Sverige" subtitle="Tippade oftast att Sverige inte skulle vinna"
-            winner={facts.antiSweden} value={facts.antiSweden && `${facts.antiSweden.value} matcher`} tint="muted" />
+            winner={facts.antiSweden} value={facts.antiSweden && `${facts.antiSweden.value} matcher`} tint="muted" ranking={facts.rankings.antiSweden} />
           <FactCard icon={<TrendingDown className="h-5 w-5" />} title="Underdog-troende" subtitle="Tippade förloraren till vinst flest gånger"
-            winner={facts.underdog} value={facts.underdog && `${facts.underdog.value} gånger`} />
+            winner={facts.underdog} value={facts.underdog && `${facts.underdog.value} gånger`} ranking={facts.rankings.underdog} />
+          <FactCard icon={<Flag className="h-5 w-5" />} title="Spanien-troende" subtitle="Tippade Spanien till vinst flest gånger"
+            winner={facts.spainBeliever} value={facts.spainBeliever && `${facts.spainBeliever.value} matcher`} tint="gold" ranking={facts.rankings.spainBeliever} />
+          <FactCard icon={<TrendingDown className="h-5 w-5" />} title="Största smällen" subtitle="Tippade en vinnare som förlorade störst i mål"
+            winner={facts.worstDefeat} value={facts.worstDefeat?.value} tint="muted" ranking={facts.rankings.worstDefeat} />
+          <FactCard icon={<Goal className="h-5 w-5" />} title="Målkung i tips" subtitle="Tippade flest mål totalt i turneringen"
+            winner={facts.mostGoalsTipped} value={facts.mostGoalsTipped && `${facts.mostGoalsTipped.value} mål totalt`} ranking={facts.rankings.mostGoalsTipped} />
+          <FactCard icon={<Shield className="h-5 w-5" />} title="Kättjefri försvarare" subtitle="Tippade minst mål totalt i turneringen"
+            winner={facts.fewestGoalsTipped} value={facts.fewestGoalsTipped && `${facts.fewestGoalsTipped.value} mål totalt`} ranking={facts.rankings.fewestGoalsTipped} />
         </div>
       </section>
 
