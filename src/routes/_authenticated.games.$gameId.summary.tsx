@@ -481,6 +481,38 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   });
 
+  // Anti-Sverige — tipped that Sweden would not win (loss or draw) in matches where Sweden plays
+  const swedenTeam = Array.from(teamMap.values()).find((t) => /sverige|sweden/i.test(t.name));
+  const antiSwedenMap = new Map<string, number>();
+  if (swedenTeam) {
+    preds.forEach((p) => {
+      const m = matchMap.get(p.match_id);
+      if (!m) return;
+      const isHome = m.home_team_id === swedenTeam.id;
+      const isAway = m.away_team_id === swedenTeam.id;
+      if (!isHome && !isAway) return;
+      const swePredWins = isHome ? p.home_score > p.away_score : p.away_score > p.home_score;
+      if (!swePredWins) {
+        antiSwedenMap.set(p.user_id, (antiSwedenMap.get(p.user_id) ?? 0) + 1);
+      }
+    });
+  }
+
+  // Underdog — tipped the losing team to win (finished matches, not draws, user picked the eventual loser)
+  const underdogMap = new Map<string, number>();
+  preds.forEach((p) => {
+    const m = matchMap.get(p.match_id);
+    if (!m || m.status !== "finished" || m.home_score == null || m.away_score == null) return;
+    if (m.home_score === m.away_score) return;
+    const actualHomeWon = m.home_score > m.away_score;
+    const predHomeWin = p.home_score > p.away_score;
+    const predAwayWin = p.away_score > p.home_score;
+    if (!predHomeWin && !predAwayWin) return; // draw prediction is not "picking a loser"
+    if ((predHomeWin && !actualHomeWon) || (predAwayWin && actualHomeWon)) {
+      underdogMap.set(p.user_id, (underdogMap.get(p.user_id) ?? 0) + 1);
+    }
+  });
+
   function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
     let bestKey: string | null = null;
     let bestVal = 0;
