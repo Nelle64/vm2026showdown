@@ -1221,28 +1221,48 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   }
 
-  // Personal fun fact for "Cicci" — skipped the most matches
+  // Personal fun fact for "Cicci" — tips mostly during lunch hours
   const cicciEntry = Array.from(profMap.values()).find(
     (p) => (p.display_name ?? "").trim().toLowerCase() === "cicci",
   );
   let cicciFact: { profile: Profile; label: string; value: string } | null = null;
   if (cicciEntry) {
-    const totalMatches = matchMap.size;
-    const predsByUser = new Map<string, number>();
-    for (const p of preds) predsByUser.set(p.user_id, (predsByUser.get(p.user_id) ?? 0) + 1);
-    const cicciCount = predsByUser.get(cicciEntry.id) ?? 0;
-    const cicciSkipped = totalMatches - cicciCount;
-    const maxSkipped = Math.max(
-      ...Array.from(predsByUser.values()).map((c) => totalMatches - c),
-    );
-    if (cicciSkipped > 0 && cicciSkipped === maxSkipped) {
-      cicciFact = {
-        profile: cicciEntry,
-        label: "Den kräsna tipsaren",
-        value: `Hoppade över ${cicciSkipped} matcher — bara det som kändes rätt fick ett tips`,
-      };
+    const stockholmHour = (iso: string) => {
+      const parts = new Intl.DateTimeFormat("sv-SE", {
+        timeZone: "Europe/Stockholm",
+        hour: "2-digit",
+        hour12: false,
+      }).formatToParts(new Date(iso));
+      const h = parts.find((p) => p.type === "hour")?.value ?? "0";
+      return parseInt(h, 10) % 24;
+    };
+    const lunchByUser = new Map<string, { lunch: number; total: number }>();
+    for (const p of preds) {
+      const h = stockholmHour(p.created_at);
+      const cur = lunchByUser.get(p.user_id) ?? { lunch: 0, total: 0 };
+      cur.total += 1;
+      if (h >= 11 && h <= 13) cur.lunch += 1;
+      lunchByUser.set(p.user_id, cur);
+    }
+    const cicciStats = lunchByUser.get(cicciEntry.id);
+    if (cicciStats && cicciStats.total > 0) {
+      const cicciShare = cicciStats.lunch / cicciStats.total;
+      const topShare = Math.max(
+        ...Array.from(lunchByUser.values()).map((v) =>
+          v.total > 0 ? v.lunch / v.total : 0,
+        ),
+      );
+      if (cicciShare === topShare && cicciStats.lunch > 0) {
+        const pct = Math.round(cicciShare * 100);
+        cicciFact = {
+          profile: cicciEntry,
+          label: "Lunchtipparen",
+          value: `${cicciStats.lunch} av ${cicciStats.total} tips (${pct}%) landade mellan kl 11 och 13 — någon körde tipset över lunchen`,
+        };
+      }
     }
   }
+
 
 
 
