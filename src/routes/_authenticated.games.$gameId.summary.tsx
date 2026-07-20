@@ -235,9 +235,9 @@ type Row = {
 };
 
 function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
-  const { userIds, profMap, preds, matchMap, finishedMatches, bonus } = d;
+  const { userIds, profMap, preds, matchMap, finishedMatches, bonus, teamMap } = d;
 
-  // Base rows
+  // Base rows — total EXCLUDES bonus points (bonus shown separately)
   const rows: Row[] = userIds.map((uid) => {
     const my = preds.filter((p) => p.user_id === uid);
     const myFinished = my.filter((p) => matchMap.get(p.match_id)?.status === "finished");
@@ -251,7 +251,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     return {
       user_id: uid,
       profile: profMap.get(uid),
-      total: mainPts + bonusPts,
+      total: mainPts,
       bonus: bonusPts,
       exact, outcome, wrong, missed,
       picks: my.length,
@@ -274,13 +274,13 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
   const firstCounts = new Map<string, number>();
   firstByMatch.forEach((uid) => firstCounts.set(uid, (firstCounts.get(uid) ?? 0) + 1));
 
-  // Avg lead time (seconds before kickoff) for each user
+  // Avg lead time
   const leadByUser = new Map<string, number[]>();
   preds.forEach((p) => {
     const m = matchMap.get(p.match_id);
     if (!m) return;
     const lead = (new Date(m.kickoff_at).getTime() - new Date(p.created_at).getTime()) / 1000;
-    if (lead < 0) return; // ignore tips after kickoff (shouldn't happen)
+    if (lead < 0) return;
     if (!leadByUser.has(p.user_id)) leadByUser.set(p.user_id, []);
     leadByUser.get(p.user_id)!.push(lead);
   });
@@ -289,7 +289,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     if (arr.length >= 5) avgLead.set(uid, arr.reduce((s, x) => s + x, 0) / arr.length);
   });
 
-  // Near miss (off-by-1 goal, not exact) on finished matches
+  // Near miss + goal averages + favorite score
   const nearMissCounts = new Map<string, number>();
   const goalsPredicted = new Map<string, { sum: number; n: number }>();
   const scoreTally = new Map<string, number>();
@@ -298,8 +298,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     if (!m || m.status !== "finished" || m.home_score == null || m.away_score == null) return;
     const dh = Math.abs(p.home_score - m.home_score);
     const da = Math.abs(p.away_score - m.away_score);
-    const total = dh + da;
-    if ((p.points ?? 0) !== 3 && total === 1) {
+    if ((p.points ?? 0) !== 3 && dh + da === 1) {
       nearMissCounts.set(p.user_id, (nearMissCounts.get(p.user_id) ?? 0) + 1);
     }
     const g = goalsPredicted.get(p.user_id) ?? { sum: 0, n: 0 };
@@ -308,20 +307,117 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     const key = `${p.home_score}-${p.away_score}`;
     scoreTally.set(key, (scoreTally.get(key) ?? 0) + 1);
   });
-
   const avgGoals = new Map<string, number>();
   goalsPredicted.forEach((v, uid) => { if (v.n >= 5) avgGoals.set(uid, v.sum / v.n); });
 
-  const bonusByUser = new Map<string, number>();
-  bonus.forEach((b) => bonusByUser.set(b.user_id, (bonusByUser.get(b.user_id) ?? 0) + (b.points ?? 0)));
+  // Draw / home / away preference (% of user's tips)
+  const outcomeShare = new Map<string, { draw: number; home: number; away: number; total: number }>();
+  preds.forEach((p) => {
+    const rec = outcomeShare.get(p.user_id) ?? { draw: 0, home: 0, away: 0, total: 0 };
+    rec.total++;
+    if (p.home_score === p.away_score) rec.draw++;
+    else if (p.home_score > p.away_score) rec.home++;
+    else rec.away++;
+    outcomeShare.set(p.user_id, rec);
+  });
+  const drawPct = new Map<string, number>();
+  const homePct = new Map<string, number>();
+  const awayPct = new Map<string, number>();
+  outcomeShare.forEach((v, uid) => {
+    if (v.total < 5) return;
+    drawPct.set(uid, Math.round((v.draw / v.total) * 100));
+    homePct.set(uid, Math.round((v.home / v.total) * 100));
+    awayPct.set(uid, Math.round((v.away / v.total) * 100));
+  });
+
+  // Hot / cold streaks — walk through each user's finished-match predictions in kickoff order
+  const hotStreak = new Map<string, number>();
+  const coldStreak = new Map<string, number>();
+  userIds.forEach((uid) => {
+    const seq = preds
+      .filter((p) => p.user_id === uid && matchMap.get(p.match_id)?.status === "finished")
+      .map((p) => ({ p, kickoff: matchMap.get(p.match_id)!.kickoff_at }))
+      .sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+    let hot = 0, coldRun = 0, bestHot = 0, bestCold = 0;
+    seq.forEach(({ p }) => {
+      if ((p.points ?? 0) > 0) { hot++; coldRun = 0; }
+      else { coldRun++; hot = 0; }
+      if (hot > bestHot) bestHot = hot;
+      if (coldRun > bestCold) bestCold = coldRun;
+    });
+    if (bestHot > 0) hotStreak.set(uid, bestHot);
+    if (bestCold > 0) coldStreak.set(uid, bestCold);
+  });
+
+  // Twins — pair with most identical predictions on the same match
+  let twins: { a: string; b: string; count: number } | null = null;
+  const pairCount = new Map<string, number>();
+  byMatch.forEach((list) => {
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        if (list[i].home_score === list[j].home_score && list[i].away_score === list[j].away_score) {
+          const [x, y] = [list[i].user_id, list[j].user_id].sort();
+          const k = `${x}|${y}`;
+          pairCount.set(k, (pairCount.get(k) ?? 0) + 1);
+        }
+      }
+    }
+  });
+  pairCount.forEach((count, key) => {
+    if (!twins || count > twins.count) {
+      const [x, y] = key.split("|");
+      twins = { a: profMap.get(x)?.display_name ?? "Okänd", b: profMap.get(y)?.display_name ?? "Okänd", count };
+    }
+  });
+
+  // Contrarian — unique scorelines per match (only one user tipped it)
+  const contrarianCounts = new Map<string, number>();
+  byMatch.forEach((list) => {
+    const tally = new Map<string, string[]>();
+    list.forEach((p) => {
+      const k = `${p.home_score}-${p.away_score}`;
+      if (!tally.has(k)) tally.set(k, []);
+      tally.get(k)!.push(p.user_id);
+    });
+    tally.forEach((users) => {
+      if (users.length === 1) contrarianCounts.set(users[0], (contrarianCounts.get(users[0]) ?? 0) + 1);
+    });
+  });
+
+  // Boldest exact — highest-scoring match tipped exactly right
+  let boldestExact: { profile: Profile | undefined; value: string } | null = null;
+  let boldestTotal = -1;
+  preds.forEach((p) => {
+    if (p.points !== 3) return;
+    const total = p.home_score + p.away_score;
+    if (total > boldestTotal) {
+      boldestTotal = total;
+      boldestExact = { profile: profMap.get(p.user_id), value: `${p.home_score}–${p.away_score} (${total} mål)` };
+    }
+  });
+
+  // Most active — total tips submitted
+  const activeCounts = new Map<string, number>();
+  rows.forEach((r) => activeCounts.set(r.user_id, r.picks));
+
+  // Match of the tournament — finished match where most players got 3 points
+  let matchOfTournament: string | null = null;
+  let bestMatchExact = 0;
+  finishedMatches.forEach((m) => {
+    const exactHere = preds.filter((p) => p.match_id === m.id && p.points === 3).length;
+    if (exactHere > bestMatchExact) {
+      bestMatchExact = exactHere;
+      const home = m.home_team_id ? teamMap.get(m.home_team_id)?.name ?? "?" : "?";
+      const away = m.away_team_id ? teamMap.get(m.away_team_id)?.name ?? "?" : "?";
+      matchOfTournament = `${home}–${away} ${m.home_score}–${m.away_score} (${exactHere} exakt)`;
+    }
+  });
 
   function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
     let bestKey: string | null = null;
     let bestVal = 0;
     for (const [k, v] of map) {
-      if (bestKey === null || (min ? v < bestVal : v > bestVal)) {
-        bestKey = k; bestVal = v;
-      }
+      if (bestKey === null || (min ? v < bestVal : v > bestVal)) { bestKey = k; bestVal = v; }
     }
     return bestKey === null ? null : { profile: profMap.get(bestKey), value: bestVal };
   }
@@ -354,6 +450,16 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     optimist: pickBest(avgGoals),
     pessimist: pickBest(avgGoals, true),
     favoriteScore,
+    drawLover: pickBest(drawPct),
+    homer: pickBest(homePct),
+    awayer: pickBest(awayPct),
+    hotStreak: pickBest(hotStreak),
+    coldStreak: pickBest(coldStreak),
+    twins: twins as { a: string; b: string; count: number } | null,
+    contrarian: pickBest(contrarianCounts),
+    boldestExact: boldestExact as { profile: Profile | undefined; value: string } | null,
+    mostActive: pickBest(activeCounts),
+    matchOfTournament,
   };
 }
 
@@ -367,6 +473,7 @@ async function loadDummy() {
     matchMap: Map<string, Match>;
     finishedMatches: Match[];
     bonus: Bonus[];
+    teamMap: Map<string, Team>;
   };
 }
 
