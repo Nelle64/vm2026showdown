@@ -558,6 +558,56 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   });
 
+  // Spain believer — tipped Spain to win in matches where Spain played
+  const spainTeam = Array.from(teamMap.values()).find((t) => /spanien|spain/i.test(t.name));
+  const spainMap = new Map<string, number>();
+  if (spainTeam) {
+    preds.forEach((p) => {
+      const m = matchMap.get(p.match_id);
+      if (!m) return;
+      const isHome = m.home_team_id === spainTeam.id;
+      const isAway = m.away_team_id === spainTeam.id;
+      if (!isHome && !isAway) return;
+      const spainPredWins = isHome ? p.home_score > p.away_score : p.away_score > p.home_score;
+      if (spainPredWins) spainMap.set(p.user_id, (spainMap.get(p.user_id) ?? 0) + 1);
+    });
+  }
+
+  // Worst defeat — user picked a winner, that team lost — biggest goal margin
+  const worstDefeatMap = new Map<string, number>();
+  const worstDefeatDetail = new Map<string, string>();
+  preds.forEach((p) => {
+    const m = matchMap.get(p.match_id);
+    if (!m || m.status !== "finished" || m.home_score == null || m.away_score == null) return;
+    if (m.home_score === m.away_score) return;
+    const predHomeWin = p.home_score > p.away_score;
+    const predAwayWin = p.away_score > p.home_score;
+    if (!predHomeWin && !predAwayWin) return;
+    const actualHomeWon = m.home_score > m.away_score;
+    const wrong = (predHomeWin && !actualHomeWon) || (predAwayWin && actualHomeWon);
+    if (!wrong) return;
+    const margin = Math.abs(m.home_score - m.away_score);
+    const prev = worstDefeatMap.get(p.user_id) ?? 0;
+    if (margin > prev) {
+      worstDefeatMap.set(p.user_id, margin);
+      const home = m.home_team_id ? teamMap.get(m.home_team_id)?.name ?? "?" : "?";
+      const away = m.away_team_id ? teamMap.get(m.away_team_id)?.name ?? "?" : "?";
+      worstDefeatDetail.set(p.user_id, `${home}–${away} ${m.home_score}–${m.away_score}`);
+    }
+  });
+
+  // Total goals tipped across all preds
+  const goalsTotalMap = new Map<string, number>();
+  preds.forEach((p) => {
+    goalsTotalMap.set(p.user_id, (goalsTotalMap.get(p.user_id) ?? 0) + p.home_score + p.away_score);
+  });
+  // Only include users with a meaningful number of tips
+  const goalsTotalFiltered = new Map<string, number>();
+  goalsTotalMap.forEach((v, uid) => {
+    const picks = rows.find((r) => r.user_id === uid)?.picks ?? 0;
+    if (picks >= 5) goalsTotalFiltered.set(uid, v);
+  });
+
   function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
     let bestKey: string | null = null;
     let bestVal = 0;
@@ -565,6 +615,15 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
       if (bestKey === null || (min ? v < bestVal : v > bestVal)) { bestKey = k; bestVal = v; }
     }
     return bestKey === null ? null : { profile: profMap.get(bestKey), value: bestVal };
+  }
+
+  function rankMap(map: Map<string, number>, format: (v: number) => string, min = false): RankEntry[] {
+    return Array.from(map.entries())
+      .sort((a, b) => min ? a[1] - b[1] : b[1] - a[1])
+      .map(([uid, v]) => ({ profile: profMap.get(uid), display: format(v) }));
+  }
+  function rankRows(sorted: Row[], format: (r: Row) => string): RankEntry[] {
+    return sorted.map((r) => ({ profile: r.profile, display: format(r) }));
   }
 
   const withPickThreshold = rows.filter((r) => r.picks >= 5);
