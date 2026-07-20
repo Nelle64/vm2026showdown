@@ -99,7 +99,9 @@ function SummaryPage() {
 
       const { data: matches } = await supabase
         .from("matches")
-        .select("id, kickoff_at, status, home_score, away_score, home_team_id, away_team_id");
+        .select(
+          "id, kickoff_at, status, home_score, away_score, home_team_id, away_team_id, stage, group_letter",
+        );
       const matchMap = new Map<string, Match>(((matches ?? []) as Match[]).map((m) => [m.id, m]));
       const finishedMatches = ((matches ?? []) as Match[]).filter((m) => m.status === "finished");
 
