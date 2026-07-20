@@ -1,5 +1,7 @@
 # VM 2026 Showdown
 
+![VM 2026 Showdown](docs/screenshots/01-landing.png)
+
 > En privat tippnings-liga för FIFA World Cup 2026 — en fullständig produkt, från onboarding till slutsummering.
 > **Live:** [vm2026showdown.lovable.app](https://vm2026showdown.lovable.app) · **English README:** [README.md](./README.md)
 
@@ -21,8 +23,6 @@ Demodata från det avslutade mästerskapet: **104 matcher · 1 028 tips · 10 sp
 ---
 
 ## Skärmbilder
-
-> Lägg PNG-filer i `docs/screenshots/` med filnamnen nedan.
 
 | | |
 |---|---|
