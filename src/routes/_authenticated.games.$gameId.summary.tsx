@@ -589,6 +589,8 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     mostDifferent: pickBest(diffRates),
     lonePoints: pickBest(lonePointsMap),
     reversedScore: pickBest(reversedMap),
+    antiSweden: pickBest(antiSwedenMap),
+    underdog: pickBest(underdogMap),
   };
 }
 
