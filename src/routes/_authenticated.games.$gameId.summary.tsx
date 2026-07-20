@@ -1162,38 +1162,52 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     fewestGoalsTipped: rankMap(goalsTotalFiltered, (v) => `${v} mål`, true),
   };
 
-  // Personal fun fact for "Emma och Thea" — they topped group K
+  // Personal fun fact for "Emma och Thea" — the tipping marathon
   const kidEntry = Array.from(profMap.values()).find(
     (p) => (p.display_name ?? "").trim().toLowerCase() === "emma och thea",
   );
   let duoFact: { profile: Profile; label: string; value: string } | null = null;
   if (kidEntry) {
-    const matchById = matchMap as Map<string, Match>;
-    // Points per (user, group) in group stage
-    const groupPoints = new Map<string, Map<string, number>>(); // group -> uid -> pts
+    // Find each user's single busiest tipping day (Europe/Stockholm)
+    const stockholmDayKey = (iso: string) =>
+      new Intl.DateTimeFormat("sv-SE", {
+        timeZone: "Europe/Stockholm",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(iso));
+    const dayCounts = new Map<string, Map<string, number>>(); // uid -> day -> count
     for (const p of preds) {
-      const m = matchById.get(p.match_id);
-      if (!m || m.status !== "finished" || m.stage !== "group" || !m.group_letter) continue;
-      if (!groupPoints.has(m.group_letter)) groupPoints.set(m.group_letter, new Map());
-      const gm = groupPoints.get(m.group_letter)!;
-      gm.set(p.user_id, (gm.get(p.user_id) ?? 0) + (p.points ?? 0));
+      const day = stockholmDayKey(p.created_at);
+      if (!dayCounts.has(p.user_id)) dayCounts.set(p.user_id, new Map());
+      const dm = dayCounts.get(p.user_id)!;
+      dm.set(day, (dm.get(day) ?? 0) + 1);
     }
-    // Find groups where Emma is sole #1
-    let bestGroup: { letter: string; pts: number } | null = null;
-    for (const [letter, gm] of groupPoints) {
-      const emmaPts = gm.get(kidEntry.id) ?? 0;
-      const max = Math.max(...gm.values());
-      const leaders = Array.from(gm.entries()).filter(([, v]) => v === max);
-      if (emmaPts === max && leaders.length === 1 && emmaPts > 0) {
-        if (!bestGroup || emmaPts > bestGroup.pts) bestGroup = { letter, pts: emmaPts };
+    const peakByUser = new Map<string, { day: string; count: number }>();
+    for (const [uid, dm] of dayCounts) {
+      let best = { day: "", count: 0 };
+      for (const [day, count] of dm) if (count > best.count) best = { day, count };
+      peakByUser.set(uid, best);
+    }
+    const emmaPeak = peakByUser.get(kidEntry.id);
+    if (emmaPeak && emmaPeak.count > 0) {
+      const ranked = Array.from(peakByUser.values())
+        .map((v) => v.count)
+        .sort((a, b) => b - a);
+      const isTopPeak = ranked[0] === emmaPeak.count;
+      const emmaTotal = preds.filter((p) => p.user_id === kidEntry.id).length;
+      const pct = emmaTotal ? Math.round((emmaPeak.count / emmaTotal) * 100) : 0;
+      const prettyDate = new Date(emmaPeak.day + "T12:00:00").toLocaleDateString("sv-SE", {
+        day: "numeric",
+        month: "long",
+      });
+      if (isTopPeak) {
+        duoFact = {
+          profile: kidEntry,
+          label: "Maratonspelaren",
+          value: `Klarade av ${emmaPeak.count} av ${emmaTotal} tips på en enda kväll (${prettyDate}) — ${pct}% i ett svep`,
+        };
       }
-    }
-    if (bestGroup) {
-      duoFact = {
-        profile: kidEntry,
-        label: `Grupp ${bestGroup.letter}-experten`,
-        value: `Bäst i gruppen med ${bestGroup.pts} poäng`,
-      };
     }
   }
 
