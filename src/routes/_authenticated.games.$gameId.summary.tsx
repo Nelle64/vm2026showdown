@@ -131,8 +131,6 @@ function SummaryPage() {
             winner={facts.contrarian} value={facts.contrarian && `${facts.contrarian.value} unika`} />
           <FactCard icon={<Swords className="h-5 w-5" />} title="Modigast exakta" subtitle="Rätt exakt resultat med flest mål"
             winner={facts.boldestExact} value={facts.boldestExact && facts.boldestExact.value} />
-          <FactCard icon={<CalendarCheck className="h-5 w-5" />} title="Alltid på plats" subtitle="Tippade flest av alla matcher"
-            winner={facts.mostActive} value={facts.mostActive && `${facts.mostActive.value} tips`} />
           <FactCard icon={<Star className="h-5 w-5" />} title="Kvällens match" subtitle="Match som gav flest 3-poängare"
             winner={null} value={facts.matchOfTournament ?? "—"} />
           <FactCard icon={<Compass className="h-5 w-5" />} title="Rebellen" subtitle="Tippade mest olikt alla andra"
@@ -141,6 +139,10 @@ function SummaryPage() {
             winner={facts.lonePoints} value={facts.lonePoints && `${facts.lonePoints.value} ensam-poäng`} tint="gold" />
           <FactCard icon={<Shuffle className="h-5 w-5" />} title="Rätt siffror – fel lag" subtitle="Tippade omvänt resultat (t.ex. 2–1 istället för 1–2)"
             winner={facts.reversedScore} value={facts.reversedScore && `${facts.reversedScore.value} gånger`} />
+          <FactCard icon={<Swords className="h-5 w-5" />} title="Mest emot Sverige" subtitle="Tippade oftast att Sverige inte skulle vinna"
+            winner={facts.antiSweden} value={facts.antiSweden && `${facts.antiSweden.value} matcher`} tint="muted" />
+          <FactCard icon={<TrendingDown className="h-5 w-5" />} title="Underdog-troende" subtitle="Tippade förloraren till vinst flest gånger"
+            winner={facts.underdog} value={facts.underdog && `${facts.underdog.value} gånger`} />
         </div>
       </section>
 
@@ -479,6 +481,38 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     }
   });
 
+  // Anti-Sverige — tipped that Sweden would not win (loss or draw) in matches where Sweden plays
+  const swedenTeam = Array.from(teamMap.values()).find((t) => /sverige|sweden/i.test(t.name));
+  const antiSwedenMap = new Map<string, number>();
+  if (swedenTeam) {
+    preds.forEach((p) => {
+      const m = matchMap.get(p.match_id);
+      if (!m) return;
+      const isHome = m.home_team_id === swedenTeam.id;
+      const isAway = m.away_team_id === swedenTeam.id;
+      if (!isHome && !isAway) return;
+      const swePredWins = isHome ? p.home_score > p.away_score : p.away_score > p.home_score;
+      if (!swePredWins) {
+        antiSwedenMap.set(p.user_id, (antiSwedenMap.get(p.user_id) ?? 0) + 1);
+      }
+    });
+  }
+
+  // Underdog — tipped the losing team to win (finished matches, not draws, user picked the eventual loser)
+  const underdogMap = new Map<string, number>();
+  preds.forEach((p) => {
+    const m = matchMap.get(p.match_id);
+    if (!m || m.status !== "finished" || m.home_score == null || m.away_score == null) return;
+    if (m.home_score === m.away_score) return;
+    const actualHomeWon = m.home_score > m.away_score;
+    const predHomeWin = p.home_score > p.away_score;
+    const predAwayWin = p.away_score > p.home_score;
+    if (!predHomeWin && !predAwayWin) return; // draw prediction is not "picking a loser"
+    if ((predHomeWin && !actualHomeWon) || (predAwayWin && actualHomeWon)) {
+      underdogMap.set(p.user_id, (underdogMap.get(p.user_id) ?? 0) + 1);
+    }
+  });
+
   function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
     let bestKey: string | null = null;
     let bestVal = 0;
@@ -555,6 +589,8 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     mostDifferent: pickBest(diffRates),
     lonePoints: pickBest(lonePointsMap),
     reversedScore: pickBest(reversedMap),
+    antiSweden: pickBest(antiSwedenMap),
+    underdog: pickBest(underdogMap),
   };
 }
 
