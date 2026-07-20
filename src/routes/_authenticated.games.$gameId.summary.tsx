@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPages } from "@/lib/supabase-pagination";
-import { Trophy, Zap, Clock, Target, Crosshair, Ghost, Sparkles, TrendingUp, TrendingDown, Repeat, Award, Flame } from "lucide-react";
+import { Trophy, Zap, Clock, Target, Crosshair, Ghost, Sparkles, TrendingUp, TrendingDown, Repeat, Award, Flame, Handshake, Home, Plane, Users, Snowflake, Shield, CalendarCheck, Star, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/games/$gameId/summary")({ component: SummaryPage });
