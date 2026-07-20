@@ -33,16 +33,22 @@ function SummaryPage() {
         .order("created_at", { ascending: true }).order("id", { ascending: true }).range(from, to));
 
       const { data: matches } = await supabase.from("matches")
-        .select("id, kickoff_at, status, home_score, away_score");
-      const matchMap = new Map<string, Match>((matches ?? []).map((m: any) => [m.id, m]));
-      const finishedMatches = (matches ?? []).filter((m: any) => m.status === "finished");
+        .select("id, kickoff_at, status, home_score, away_score, home_team_id, away_team_id");
+      const matchMap = new Map<string, Match>(((matches ?? []) as Match[]).map((m) => [m.id, m]));
+      const finishedMatches = ((matches ?? []) as Match[]).filter((m) => m.status === "finished");
+
+      const teamIds = Array.from(new Set(((matches ?? []) as Match[]).flatMap((m) => [m.home_team_id, m.away_team_id]).filter(Boolean) as string[]));
+      const { data: teams } = teamIds.length
+        ? await supabase.from("teams").select("id, name").in("id", teamIds)
+        : { data: [] as Team[] };
+      const teamMap = new Map<string, Team>(((teams ?? []) as Team[]).map((t) => [t.id, t]));
 
       const { data: bonusRows } = await supabase.from("bonus_answers")
         .select("user_id, points, question:bonus_questions!inner(game_id)")
         .eq("question.game_id", gameId).in("user_id", userIds);
       const bonus = (bonusRows ?? []) as unknown as Bonus[];
 
-      return { userIds, profMap, preds, matches: matches ?? [], matchMap, finishedMatches, bonus };
+      return { userIds, profMap, preds, matches: (matches ?? []) as Match[], matchMap, finishedMatches, bonus, teamMap };
     },
   });
 
