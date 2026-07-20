@@ -61,6 +61,8 @@ type Match = {
   away_score: number | null;
   home_team_id: string | null;
   away_team_id: string | null;
+  stage: string | null;
+  group_letter: string | null;
 };
 type Bonus = { user_id: string; points: number | null };
 type Team = { id: string; name: string };
@@ -97,7 +99,9 @@ function SummaryPage() {
 
       const { data: matches } = await supabase
         .from("matches")
-        .select("id, kickoff_at, status, home_score, away_score, home_team_id, away_team_id");
+        .select(
+          "id, kickoff_at, status, home_score, away_score, home_team_id, away_team_id, stage, group_letter",
+        );
       const matchMap = new Map<string, Match>(((matches ?? []) as Match[]).map((m) => [m.id, m]));
       const finishedMatches = ((matches ?? []) as Match[]).filter((m) => m.status === "finished");
 
@@ -1158,36 +1162,37 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     fewestGoalsTipped: rankMap(goalsTotalFiltered, (v) => `${v} mål`, true),
   };
 
-  // Personal fun fact for "Emma och Thea" — highlight their long-term planning streak
+  // Personal fun fact for "Emma och Thea" — they topped group K
   const kidEntry = Array.from(profMap.values()).find(
     (p) => (p.display_name ?? "").trim().toLowerCase() === "emma och thea",
   );
   let duoFact: { profile: Profile; label: string; value: string } | null = null;
   if (kidEntry) {
     const matchById = matchMap as Map<string, Match>;
-    // avg lead time per user (hours before kickoff)
-    const leads = new Map<string, number[]>();
+    // Points per (user, group) in group stage
+    const groupPoints = new Map<string, Map<string, number>>(); // group -> uid -> pts
     for (const p of preds) {
       const m = matchById.get(p.match_id);
-      if (!m) continue;
-      const hours = (new Date(m.kickoff_at).getTime() - new Date(p.created_at).getTime()) / 3_600_000;
-      if (!Number.isFinite(hours)) continue;
-      if (!leads.has(p.user_id)) leads.set(p.user_id, []);
-      leads.get(p.user_id)!.push(hours);
+      if (!m || m.status !== "finished" || m.stage !== "group" || !m.group_letter) continue;
+      if (!groupPoints.has(m.group_letter)) groupPoints.set(m.group_letter, new Map());
+      const gm = groupPoints.get(m.group_letter)!;
+      gm.set(p.user_id, (gm.get(p.user_id) ?? 0) + (p.points ?? 0));
     }
-    const avgLead = new Map<string, number>();
-    for (const [uid, arr] of leads) {
-      if (arr.length) avgLead.set(uid, arr.reduce((a, b) => a + b, 0) / arr.length);
+    // Find groups where Emma is sole #1
+    let bestGroup: { letter: string; pts: number } | null = null;
+    for (const [letter, gm] of groupPoints) {
+      const emmaPts = gm.get(kidEntry.id) ?? 0;
+      const max = Math.max(...gm.values());
+      const leaders = Array.from(gm.entries()).filter(([, v]) => v === max);
+      if (emmaPts === max && leaders.length === 1 && emmaPts > 0) {
+        if (!bestGroup || emmaPts > bestGroup.pts) bestGroup = { letter, pts: emmaPts };
+      }
     }
-    const kidAvg = avgLead.get(kidEntry.id);
-    if (kidAvg !== undefined) {
-      const ranked = Array.from(avgLead.entries()).sort((a, b) => b[1] - a[1]);
-      const rank = ranked.findIndex(([uid]) => uid === kidEntry.id) + 1;
-      const days = kidAvg / 24;
+    if (bestGroup) {
       duoFact = {
         profile: kidEntry,
-        label: "Framtidsspanaren",
-        value: `Tippade i snitt ${days.toFixed(1)} dagar före avspark · plats ${rank} av ${ranked.length}`,
+        label: `Grupp ${bestGroup.letter}-experten`,
+        value: `Bäst i gruppen med ${bestGroup.pts} poäng`,
       };
     }
   }
