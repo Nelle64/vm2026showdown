@@ -552,6 +552,9 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     boldestExact: boldestExact as { profile: Profile | undefined; value: string } | null,
     mostActive: pickBest(activeCounts),
     matchOfTournament,
+    mostDifferent: pickBest(diffRates),
+    lonePoints: pickBest(lonePointsMap),
+    reversedScore: pickBest(reversedMap),
   };
 }
 
