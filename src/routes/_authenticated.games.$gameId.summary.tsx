@@ -1217,7 +1217,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
   );
   let cicciFact: { profile: Profile; label: string; value: string } | null = null;
   if (cicciEntry) {
-    const totalMatches = matches.length;
+    const totalMatches = matchMap.size;
     const predsByUser = new Map<string, number>();
     for (const p of preds) predsByUser.set(p.user_id, (predsByUser.get(p.user_id) ?? 0) + 1);
     const cicciCount = predsByUser.get(cicciEntry.id) ?? 0;
