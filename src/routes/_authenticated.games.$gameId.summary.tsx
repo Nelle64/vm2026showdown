@@ -433,35 +433,20 @@ function SummaryPage() {
             value={facts.fewestGoalsTipped && `${facts.fewestGoalsTipped.value} mål totalt`}
             ranking={facts.rankings.fewestGoalsTipped}
           />
+          {facts.duoFact && (
+            <FactCard
+              icon={<Users className="h-5 w-5" />}
+              title={facts.duoFact.label}
+              subtitle="Två hjärnor, ett konto – Emma & Thea"
+              winner={{ profile: facts.duoFact.profile }}
+              value={facts.duoFact.value}
+              tint="gold"
+            />
+          )}
         </div>
+
       </section>
 
-      {/* Titlar – varje spelare får en */}
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Titlar
-        </h2>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Alla spelare får en – baserat på var de rankar högst.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {facts.titles.map((t) => (
-            <div
-              key={t.user_id}
-              className="flex items-center gap-3 rounded-xl border border-gold/30 bg-gold/5 p-3"
-            >
-              <Avatar profile={t.profile} size={10} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{t.profile?.display_name ?? "Okänd"}</div>
-                <div className="truncate text-xs text-gold">{t.label}</div>
-              </div>
-              <div className="text-right text-xs font-semibold tabular-nums text-muted-foreground">
-                {t.display}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Personliga signaturer */}
       <section>
@@ -1173,63 +1158,33 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     fewestGoalsTipped: rankMap(goalsTotalFiltered, (v) => `${v} mål`, true),
   };
 
-  // Titles for everyone — greedy assignment so every player gets a unique title
-  // based on the category where they rank highest.
-  const titleDefs: { key: keyof typeof rankings; label: string }[] = [
-    { key: "mostExact", label: "Prickskytten" },
-    { key: "bestAccuracy", label: "Precisionsmästaren" },
-    { key: "mostOutcome", label: "Utfallsexperten" },
-    { key: "bonusKing", label: "Bonuskungen" },
-    { key: "mostFirst", label: "Snabbast på avtryckaren" },
-    { key: "earliest", label: "Långtidsplaneraren" },
-    { key: "latest", label: "Sista-minuten-tippen" },
-    { key: "hotStreak", label: "Het strimma" },
-    { key: "lonePoints", label: "Ensamvargen" },
-    { key: "contrarian", label: "Kontrarian" },
-    { key: "mostDifferent", label: "Rebellen" },
-    { key: "mostNearMiss", label: "Målsnöret" },
-    { key: "optimist", label: "Optimisten" },
-    { key: "pessimist", label: "Pessimisten" },
-    { key: "drawLover", label: "Oavgjord-troende" },
-    { key: "homer", label: "Hemmasugen" },
-    { key: "awayer", label: "Bortasugen" },
-    { key: "spainBeliever", label: "Spanien-troende" },
-    { key: "antiSweden", label: "Anti-Sverige" },
-    { key: "underdog", label: "Underdog-troende" },
-    { key: "reversedScore", label: "Rätt siffror – fel lag" },
-    { key: "mostGoalsTipped", label: "Målkungen" },
-    { key: "fewestGoalsTipped", label: "Målsnål" },
-    { key: "mostActive", label: "Flitigaste tippare" },
-    { key: "coldStreak", label: "Iskall period" },
-    { key: "mostMissed", label: "Slarvern" },
-  ];
-
-  const assigned = new Map<string, { label: string; display: string }>();
-  const takenTitles = new Set<string>();
-  const maxRank = Math.max(1, ...titleDefs.map((d) => rankings[d.key]?.length ?? 0));
-  for (let rank = 0; rank < maxRank && assigned.size < userIds.length; rank++) {
-    for (const def of titleDefs) {
-      if (takenTitles.has(def.key)) continue;
-      const list = rankings[def.key];
-      const entry = list?.[rank];
-      if (!entry?.profile) continue;
-      const uid = entry.profile.id;
-      if (assigned.has(uid)) continue;
-      assigned.set(uid, { label: def.label, display: entry.display });
-      takenTitles.add(def.key);
-      if (assigned.size >= userIds.length) break;
+  // Personal fun fact for the "Emma och Thea" duo — a shared account gets a shared shout-out
+  const duoEntry = Array.from(profMap.values()).find(
+    (p) => (p.display_name ?? "").trim().toLowerCase() === "emma och thea",
+  );
+  let duoFact: { profile: Profile; label: string; value: string } | null = null;
+  if (duoEntry) {
+    const duoPreds = preds.filter((p) => p.user_id === duoEntry.id);
+    const scoreCounts = new Map<string, number>();
+    for (const p of duoPreds) {
+      const k = `${p.home_score}–${p.away_score}`;
+      scoreCounts.set(k, (scoreCounts.get(k) ?? 0) + 1);
     }
+    let topScore = "1–1";
+    let topCount = 0;
+    for (const [k, c] of scoreCounts) {
+      if (c > topCount) {
+        topScore = k;
+        topCount = c;
+      }
+    }
+    duoFact = {
+      profile: duoEntry,
+      label: "Duon med dubbel magkänsla",
+      value: `${duoPreds.length} tips tillsammans · favvoresultat ${topScore} (${topCount} ggr)`,
+    };
   }
-  const titles = userIds
-    .map((uid) => ({
-      user_id: uid,
-      profile: profMap.get(uid),
-      label: assigned.get(uid)?.label ?? "Trotjänaren",
-      display: assigned.get(uid)?.display ?? "Alltid med i matchen",
-    }))
-    .sort((a, b) =>
-      (a.profile?.display_name ?? "").localeCompare(b.profile?.display_name ?? ""),
-    );
+
 
 
   return {
@@ -1237,7 +1192,7 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     finishedCount: finishedMatches.length,
     totalPreds: preds.length,
     signatures,
-    titles,
+    duoFact,
     rankings,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
     mostOutcome: mostOutcomeRow
