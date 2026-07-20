@@ -436,6 +436,33 @@ function SummaryPage() {
         </div>
       </section>
 
+      {/* Titlar – varje spelare får en */}
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Titlar
+        </h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Alla spelare får en – baserat på var de rankar högst.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {facts.titles.map((t) => (
+            <div
+              key={t.user_id}
+              className="flex items-center gap-3 rounded-xl border border-gold/30 bg-gold/5 p-3"
+            >
+              <Avatar profile={t.profile} size={10} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">{t.profile?.display_name ?? "Okänd"}</div>
+                <div className="truncate text-xs text-gold">{t.label}</div>
+              </div>
+              <div className="text-right text-xs font-semibold tabular-nums text-muted-foreground">
+                {t.display}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Personliga signaturer */}
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -457,6 +484,7 @@ function SummaryPage() {
           ))}
         </div>
       </section>
+
 
       {/* Slutställning */}
       <section>
