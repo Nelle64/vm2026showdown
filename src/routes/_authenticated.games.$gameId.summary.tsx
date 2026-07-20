@@ -10,8 +10,9 @@ export const Route = createFileRoute("/_authenticated/games/$gameId/summary")({ 
 
 type Profile = { id: string; display_name: string | null; avatar_url: string | null };
 type Pred = { user_id: string; match_id: string; home_score: number; away_score: number; points: number | null; created_at: string };
-type Match = { id: string; kickoff_at: string; status: string; home_score: number | null; away_score: number | null };
+type Match = { id: string; kickoff_at: string; status: string; home_score: number | null; away_score: number | null; home_team_id: string | null; away_team_id: string | null };
 type Bonus = { user_id: string; points: number | null };
+type Team = { id: string; name: string };
 
 function SummaryPage() {
   const { gameId } = useParams({ from: "/_authenticated/games/$gameId/summary" });
