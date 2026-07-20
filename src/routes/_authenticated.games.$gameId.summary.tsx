@@ -451,7 +451,7 @@ function SummaryPage() {
             <FactCard
               icon={<Users className="h-5 w-5" />}
               title={facts.cicciFact.label}
-              subtitle="Har en väldigt tydlig favorittid för att tippa"
+              subtitle="Tippade som mest under lunchrasten"
               winner={{ profile: facts.cicciFact.profile }}
               value={facts.cicciFact.value}
               tint="gold"
