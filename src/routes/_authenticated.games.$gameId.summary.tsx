@@ -151,6 +151,7 @@ function SummaryPage() {
                 <div className="truncate font-semibold">{r.profile?.display_name ?? "Okänd"}</div>
                 <div className="text-xs text-muted-foreground">
                   {r.exact} exakt · {r.outcome} utfall · {r.wrong} fel{r.missed ? ` · ${r.missed} miss` : ""} · {r.accuracy}%
+                  {r.bonus > 0 ? ` · ${r.bonus} bonus` : ""}
                 </div>
               </div>
               <div className="text-right">
