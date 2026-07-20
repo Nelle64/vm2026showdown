@@ -24,8 +24,6 @@ Demo dataset from the finished tournament: **104 matches · 1 028 predictions ·
 
 ## Screenshots
 
-> Place PNGs under `docs/screenshots/` with the filenames below. They render inline once added.
-
 | | |
 |---|---|
 | ![Landing](docs/screenshots/01-landing.png) | ![Matches](docs/screenshots/02-matches.png) |
