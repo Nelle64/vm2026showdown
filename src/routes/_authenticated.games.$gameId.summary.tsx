@@ -138,6 +138,26 @@ function SummaryPage() {
         </div>
       </section>
 
+      {/* Personliga signaturer */}
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Personliga signaturer</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Varje spelares egen lilla grej – mest tippade slutresultat.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {facts.signatures.map((s) => (
+            <div key={s.user_id} className="flex items-center gap-3 rounded-xl border bg-card p-3">
+              <Avatar profile={s.profile} size={10} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">{s.profile?.display_name ?? "Okänd"}</div>
+                <div className="truncate text-xs text-muted-foreground">{s.label}</div>
+              </div>
+              <div className="text-right text-sm font-bold text-gold tabular-nums">{s.value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
+
       {/* Slutställning */}
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Slutställning</h2>
