@@ -441,9 +441,19 @@ function SummaryPage() {
             <FactCard
               icon={<Users className="h-5 w-5" />}
               title={facts.duoFact.label}
-              subtitle="Två hjärnor, ett konto – Emma & Thea"
+              subtitle="Fixade hela turneringen på en enda kväll"
               winner={{ profile: facts.duoFact.profile }}
               value={facts.duoFact.value}
+              tint="gold"
+            />
+          )}
+          {facts.cicciFact && (
+            <FactCard
+              icon={<Users className="h-5 w-5" />}
+              title={facts.cicciFact.label}
+              subtitle="Tippade bara matcherna som kändes rätt"
+              winner={{ profile: facts.cicciFact.profile }}
+              value={facts.cicciFact.value}
               tint="gold"
             />
           )}
