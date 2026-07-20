@@ -226,17 +226,32 @@ function Avatar({ profile, size = 9, ring }: { profile: Profile | undefined | nu
   );
 }
 
-function FactCard({ icon, title, subtitle, winner, value, tint }: {
+type RankEntry = { profile: Profile | undefined; display: string };
+
+function FactCard({ icon, title, subtitle, winner, value, tint, ranking }: {
   icon: React.ReactNode; title: string; subtitle: string;
   winner: { profile: Profile | undefined } | null; value: string | null | undefined;
   tint?: "gold" | "muted";
+  ranking?: RankEntry[];
 }) {
+  const [open, setOpen] = useState(false);
   const borderCls = tint === "gold" ? "border-gold/40" : "border-border";
+  const hasRanking = ranking && ranking.length > 0;
   return (
-    <div className={cn("rounded-xl border bg-card p-4", borderCls)}>
+    <div className={cn("relative rounded-xl border bg-card p-4", borderCls)}>
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <span className={tint === "gold" ? "text-gold" : "text-foreground"}>{icon}</span>
-        <span>{title}</span>
+        <span className="flex-1 truncate">{title}</span>
+        {hasRanking && (
+          <button
+            type="button"
+            aria-label={`Visa lista för ${title}`}
+            onClick={() => setOpen(true)}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ListOrdered className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="text-[11px] text-muted-foreground">{subtitle}</div>
       <div className="mt-3 flex items-center gap-3">
@@ -246,6 +261,35 @@ function FactCard({ icon, title, subtitle, winner, value, tint }: {
           <div className="truncate text-xs text-gold">{value ?? "—"}</div>
         </div>
       </div>
+
+      {hasRanking && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className={tint === "gold" ? "text-gold" : "text-foreground"}>{icon}</span>
+                {title}
+              </DialogTitle>
+              <DialogDescription>{subtitle}</DialogDescription>
+            </DialogHeader>
+            <ol className="mt-2 space-y-2">
+              {ranking!.map((r, i) => (
+                <li key={`${r.profile?.id ?? "x"}-${i}`} className={cn(
+                  "flex items-center gap-3 rounded-lg border bg-card p-2.5",
+                  i === 0 && "border-gold/50 bg-gold/5"
+                )}>
+                  <div className="w-6 text-center text-sm font-bold text-muted-foreground tabular-nums">{i + 1}</div>
+                  <Avatar profile={r.profile} size={8} />
+                  <div className="min-w-0 flex-1 truncate text-sm font-semibold">
+                    {r.profile?.display_name ?? "Okänd"}
+                  </div>
+                  <div className="text-right text-sm font-bold tabular-nums text-gold">{r.display}</div>
+                </li>
+              ))}
+            </ol>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
