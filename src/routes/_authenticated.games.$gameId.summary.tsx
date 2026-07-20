@@ -287,23 +287,17 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
   const bonusByUser = new Map<string, number>();
   bonus.forEach((b) => bonusByUser.set(b.user_id, (bonusByUser.get(b.user_id) ?? 0) + (b.points ?? 0)));
 
-  const mkWinner = (uid: string | undefined) => uid ? { profile: profMap.get(uid) } : null;
-  const pickMax = <T,>(map: Map<string, T>, cmp: (a: T, b: T) => number) => {
-    let best: [string, T] | null = null;
-    map.forEach((v, k) => { if (!best || cmp(v, best[1]) > 0) best = [k, v]; });
-    return best;
-  };
-  const pickMin = <T,>(map: Map<string, T>, cmp: (a: T, b: T) => number) => pickMax(map, (a, b) => -cmp(a, b));
+  function pickBest(map: Map<string, number>, min = false): { profile: Profile | undefined; value: number } | null {
+    let bestKey: string | null = null;
+    let bestVal = 0;
+    for (const [k, v] of map) {
+      if (bestKey === null || (min ? v < bestVal : v > bestVal)) {
+        bestKey = k; bestVal = v;
+      }
+    }
+    return bestKey === null ? null : { profile: profMap.get(bestKey), value: bestVal };
+  }
 
-  const winnerFromMap = <T,>(map: Map<string, T>, cmp: (a: T, b: T) => number, min = false) => {
-    const best = (min ? pickMin : pickMax)(map, cmp);
-    if (!best) return null;
-    return { profile: profMap.get(best[0]), value: best[1] };
-  };
-
-  const numCmp = (a: number, b: number) => a - b;
-
-  // Most exact / outcome / missed / bonus / accuracy from rows
   const withPickThreshold = rows.filter((r) => r.picks >= 5);
   const mostExactRow = [...rows].sort((a, b) => b.exact - a.exact)[0];
   const mostOutcomeRow = [...rows].sort((a, b) => b.outcome - a.outcome)[0];
@@ -311,11 +305,10 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
   const bestAccRow = [...withPickThreshold].sort((a, b) => b.accuracy - a.accuracy)[0];
   const bonusKingRow = [...rows].sort((a, b) => b.bonus - a.bonus)[0];
 
-  const favoriteScore = (() => {
-    let best: { score: string; count: number } | null = null;
-    scoreTally.forEach((count, score) => { if (!best || count > best.count) best = { score, count }; });
-    return best;
-  })();
+  let favoriteScore: { score: string; count: number } | null = null;
+  for (const [score, count] of scoreTally) {
+    if (!favoriteScore || count > favoriteScore.count) favoriteScore = { score, count };
+  }
 
   return {
     rows,
