@@ -663,11 +663,58 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     })
     .sort((a, b) => (a.profile?.display_name ?? "").localeCompare(b.profile?.display_name ?? ""));
 
+  // Worst defeat winner value (biggest single margin)
+  let worstDefeatWinner: { profile: Profile | undefined; value: string } | null = null;
+  {
+    const best = pickBest(worstDefeatMap);
+    if (best) {
+      const uid = [...worstDefeatMap.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      const detail = worstDefeatDetail.get(uid);
+      worstDefeatWinner = { profile: best.profile, value: `${best.value} mål${detail ? ` (${detail})` : ""}` };
+    }
+  }
+
+  const rankings = {
+    mostExact: rankRows([...rows].sort((a, b) => b.exact - a.exact), (r) => `${r.exact} exakta`),
+    mostOutcome: rankRows([...rows].sort((a, b) => b.outcome - a.outcome), (r) => `${r.outcome} utfall`),
+    mostMissed: rankRows([...rows].sort((a, b) => b.missed - a.missed), (r) => `${r.missed} missade`),
+    bestAccuracy: rankRows([...withPickThreshold].sort((a, b) => b.accuracy - a.accuracy), (r) => `${r.accuracy}%`),
+    bonusKing: rankRows([...rows].sort((a, b) => b.bonus - a.bonus), (r) => `${r.bonus} p`),
+    mostActive: rankRows([...rows].sort((a, b) => b.picks - a.picks), (r) => `${r.picks} tips`),
+    mostFirst: rankMap(firstCounts, (v) => `${v} ggr`),
+    latest: rankMap(avgLead, (v) => formatDuration(v), true),
+    earliest: rankMap(avgLead, (v) => formatDuration(v)),
+    mostNearMiss: rankMap(nearMissCounts, (v) => `${v} nära`),
+    optimist: rankMap(avgGoals, (v) => `${v.toFixed(2)} mål/tips`),
+    pessimist: rankMap(avgGoals, (v) => `${v.toFixed(2)} mål/tips`, true),
+    drawLover: rankMap(drawPct, (v) => `${v}%`),
+    homer: rankMap(homePct, (v) => `${v}%`),
+    awayer: rankMap(awayPct, (v) => `${v}%`),
+    hotStreak: rankMap(hotStreak, (v) => `${v} i rad`),
+    coldStreak: rankMap(coldStreak, (v) => `${v} i rad`),
+    contrarian: rankMap(contrarianCounts, (v) => `${v} unika`),
+    mostDifferent: rankMap(diffRates, (v) => `${v}%`),
+    lonePoints: rankMap(lonePointsMap, (v) => `${v} p`),
+    reversedScore: rankMap(reversedMap, (v) => `${v} ggr`),
+    antiSweden: rankMap(antiSwedenMap, (v) => `${v} matcher`),
+    underdog: rankMap(underdogMap, (v) => `${v} ggr`),
+    spainBeliever: rankMap(spainMap, (v) => `${v} matcher`),
+    worstDefeat: Array.from(worstDefeatMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([uid, margin]) => ({
+        profile: profMap.get(uid),
+        display: `${margin} mål${worstDefeatDetail.get(uid) ? ` · ${worstDefeatDetail.get(uid)}` : ""}`,
+      })) as RankEntry[],
+    mostGoalsTipped: rankMap(goalsTotalFiltered, (v) => `${v} mål`),
+    fewestGoalsTipped: rankMap(goalsTotalFiltered, (v) => `${v} mål`, true),
+  };
+
   return {
     rows,
     finishedCount: finishedMatches.length,
     totalPreds: preds.length,
     signatures,
+    rankings,
     mostExact: mostExactRow ? { profile: mostExactRow.profile, value: mostExactRow.exact } : null,
     mostOutcome: mostOutcomeRow ? { profile: mostOutcomeRow.profile, value: mostOutcomeRow.outcome } : null,
     mostMissed: mostMissedRow && mostMissedRow.missed > 0 ? { profile: mostMissedRow.profile, value: mostMissedRow.missed } : null,
@@ -695,6 +742,10 @@ function computeFacts(d: NonNullable<Awaited<ReturnType<typeof loadDummy>>>) {
     reversedScore: pickBest(reversedMap),
     antiSweden: pickBest(antiSwedenMap),
     underdog: pickBest(underdogMap),
+    spainBeliever: pickBest(spainMap),
+    worstDefeat: worstDefeatWinner,
+    mostGoalsTipped: pickBest(goalsTotalFiltered),
+    fewestGoalsTipped: pickBest(goalsTotalFiltered, true),
   };
 }
 
