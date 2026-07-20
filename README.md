@@ -1,132 +1,141 @@
 # VM 2026 Showdown
 
-En privat tipping-app för FIFA World Cup 2026. Skapa en liga, bjud in vänner, tippa matcher, svara på bonusfrågor och följ en live leaderboard – allt i en mobilanpassad webbapp.
+> A private prediction league for the FIFA World Cup 2026 — full product, from onboarding to final summary.
+> **Live:** [vm2026showdown.lovable.app](https://vm2026showdown.lovable.app) · **Swedish README:** [README.sv.md](./README.sv.md)
 
-> Byggd med [Lovable](https://lovable.dev) och publicerad på `vm2026showdown.lovable.app`.
-
----
-
-## Funktioner
-
-- 🔐 **Auth** – Inloggning med Google via Supabase Auth.
-- 🏆 **Spel / ligor** – Skapa privata spel, generera invite-koder och låt admin godkänna ansökningar.
-- ⚽ **Matchtippning** – Tippa alla VM-matcher. Matcher låses antingen per match eller per omgång med en deadline som admin styr.
-- 🔒 **Lock modes** – Välj mellan `per_match` (lås 1 minut före avspark) eller `per_round` (lås alla matcher i omgången vid en gemensam deadline).
-- 📊 **Leaderboard** – Live-poängställning med exakta resultat, rätt utfall och pricksäkerhet.
-- ❓ **Bonusfrågor** – Flera frågetyper: flervalsfrågor, fritext, numeriskt med närmast-rätt och sammansatta frågor. Separat bonus-poänglista.
-- 🏟️ **Turneringsvy** – Gruppspelstabeller och knockout-träd, allt expanderbart.
-- 🥇 **Summeringssida** – Podium för topp 3 och mängder av "fun facts" om spelarnas tips.
-- 🔔 **Realtime** – Leaderboard och admin-vyer uppdateras live via Supabase Realtime.
-- 📱 **Mobilanpassad** – Bottom navigation och responsiva vyer.
+A multi-user web app where friends create private leagues, predict every World Cup match, answer bonus questions and follow a live leaderboard. Built as a portfolio project to demonstrate end-to-end product thinking — authentication, permissions, time-critical business rules, automatic scoring, external API integration, realtime updates and admin tooling — in a real, in-production application used by 10 real players across 104 matches and 1 028 predictions.
 
 ---
 
-## Teknikstack
+## Why this project
 
-| Del | Teknik |
-|-----|--------|
-| Framework | [TanStack Start](https://tanstack.com/start) (React 19 + Vite 7) |
-| Styling | Tailwind CSS v4 + shadcn/ui-komponenter |
-| Backend / DB / Auth | Lovable Cloud (Supabase) |
-| API för matchdata | [football-data.org](https://www.football-data.org) |
-| Språk | TypeScript |
+Most portfolio apps stop at CRUD. This one models a real domain with real edge cases:
+
+- **Multi-user with private data** — every user only sees their own leagues, tips and bonus answers until deadlines pass.
+- **Time-critical rules** — predictions must lock at the exact right moment, in the right timezone, whether the admin chose `per_match` or `per_round` locking.
+- **Server-authoritative scoring** — points are computed by Postgres triggers and RPCs, not by clients, so results are consistent, auditable and recomputable.
+- **A full lifecycle** — from Google sign-in and league invites to a final summary page with a podium and 20+ fun-fact rankings.
+
+Demo dataset from the finished tournament: **104 matches · 1 028 predictions · 10 players**, with automatic leaderboard, separate bonus scoring, podium and aggregated statistics.
+
+---
+
+## Screenshots
+
+> Place PNGs under `docs/screenshots/` with the filenames below. They render inline once added.
+
+| | |
+|---|---|
+| ![Landing](docs/screenshots/01-landing.png) | ![Matches](docs/screenshots/02-matches.png) |
+| ![Predictions matrix](docs/screenshots/03-predictions-matrix.png) | ![Tournament tree](docs/screenshots/04-tournament.png) |
+| ![Leaderboard](docs/screenshots/05-leaderboard.png) | ![Summary / podium](docs/screenshots/06-summary.png) |
+| ![Admin panel](docs/screenshots/07-admin.png) | ![Bonus questions](docs/screenshots/08-bonus.png) |
+
+---
+
+## Features
+
+- 🔐 **Auth** — Google sign-in via Supabase Auth, with pending-invite handoff after login.
+- 🏆 **Private leagues** — create games, share invite codes, admin approves join requests.
+- ⚽ **Match predictions** — predict every WC 2026 match; locks either per match (1 min before kickoff) or per round (single admin-set deadline).
+- 📊 **Automatic scoring** — Postgres triggers award 3 p for an exact score, 1 p for the correct outcome, computed the moment a result is entered.
+- ❓ **Bonus questions** — multiple choice, free text, numeric with closest-wins and composite questions (e.g. "first goalscorer + minute"); separate bonus leaderboard.
+- 🏟️ **Tournament view** — group tables and knockout bracket, expandable.
+- 🥇 **Final summary** — podium + 20+ fun-fact categories (Rebellen, Ensamvargen, Rätt siffror – fel lag, Största smällen, …), each with a per-category ranking dialog.
+- 🔔 **Realtime UX** — leaderboards and admin views update live via Supabase Realtime; the database row remains the source of truth.
+- 📱 **Mobile-first** — bottom nav, responsive layouts, PWA manifest.
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Framework | TanStack Start (React 19, Vite 7) on Cloudflare Workers |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| Backend / DB / Auth | Supabase (via Lovable Cloud) — Postgres, RLS, Realtime, Storage |
+| Match data | [football-data.org](https://www.football-data.org) (competition `WC`) |
+| Scheduling | `pg_cron` + `pg_net` hitting a public sync route |
+| Language | TypeScript |
 | Package manager | Bun |
 
+See [`docs/architecture.md`](./docs/architecture.md) for the full diagram and data model.
+
 ---
 
-## Kom igång lokalt
+## Three technical decisions worth calling out
 
-### Förutsättningar
+1. **Database-centric scoring.** Points are computed in Postgres via triggers and RPCs, not in the client. One source of truth, automatic recomputation when a result is corrected, and rules that can be audited in SQL.
+2. **Two locking modes.** `per_match` locks each match 1 minute before kickoff; `per_round` locks every match in a round at one admin-set deadline. This encodes two different real-world use cases — playing casually vs. running a strict office pool — and forced explicit decisions about the authoritative clock (server), what happens exactly at the deadline, and how admin edits to a deadline propagate.
+3. **Realtime as UX, not truth.** Supabase Realtime pushes leaderboard and admin view updates, but the persisted row is authoritative. Clients revalidate against the DB on reconnect, so a dropped socket never desynchronises scores.
 
-- [Bun](https://bun.sh) installerat
-- Ett Supabase-projekt (via Lovable Cloud eller eget)
-- En API-nyckel från [football-data.org](https://www.football-data.org)
+More context — trade-offs, edge cases and what I would change next — in [`docs/case-study.md`](./docs/case-study.md).
 
-### Installation
+---
+
+## Security-conscious design
+
+Everything below is implemented in code and migrations in this repo. This is not a formal audit — it is a description of the controls in place.
+
+- **RLS on every public table**, with `GRANT`s scoped to the roles each policy allows.
+- **Roles in a separate `user_roles` table**, never on `profiles`. Admin checks go through a `SECURITY DEFINER` `has_role()` function to avoid recursive RLS and client-side tampering.
+- **Predictions and bonus answers stay private until lock time**, enforced by RLS predicates against the match/question lock timestamp — not by hiding fields in the UI.
+- **Admin-only mutations** (setting results, grading bonus answers, approving join requests) run through RPCs that re-check `has_role()` server-side.
+- **`/api/public/sync`** is the one intentionally-public endpoint (needed for `pg_cron`). It is idempotent, verifies a shared secret, and writes only match metadata / results — no user data path.
+- **Regularity-time only.** Sync stores 90-minute results (`regularTime` from football-data.org), never scores that include extra time or penalties, matching the game's rules.
+
+See [`docs/architecture.md`](./docs/architecture.md#security) for the full list.
+
+---
+
+## What I built vs. what the tool did
+
+This project was built in [Lovable](https://lovable.dev) as an AI-assisted development environment. Being honest about that matters — but so does being honest about the work.
+
+**I owned:**
+
+- Product requirements, user journeys and acceptance criteria for both players and admins.
+- The scoring rules (3/1/0, bonus scoring separate from match scoring, closest-wins for numeric bonuses, composite question grading).
+- The data model — tables, relationships, and the RLS policies that keep predictions private until lock.
+- The two locking modes and their edge cases (timezones, deadline changes, late-arriving results).
+- Choosing and integrating football-data.org after API-Football turned out not to cover WC 2026 on the free tier.
+- Debugging real production issues: PostgREST join quirks, Supabase's 1 000-row default cutting off predictions, duplicate matches after API sync, extra-time results leaking into scoring, an ambiguous SQL column in a join RPC.
+- Testing edge cases around permissions, lock timing and re-scoring.
+- Iterating the mobile and desktop experience with real users during the tournament.
+
+Lovable accelerated writing boilerplate, scaffolding routes and generating migration drafts. Every decision above, and every fix to a bug that only shows up with real users and real data, is mine.
+
+---
+
+## Run it locally
+
+Requirements: [Bun](https://bun.sh), a Supabase project, a football-data.org API key.
 
 ```bash
 bun install
+bun dev            # http://localhost:8080
+bun run build      # production build
 ```
 
-### Miljövariabler
-
-Kopiera `.env` och fyll i dina värden:
+`.env`:
 
 ```bash
-VITE_SUPABASE_URL=https://<ditt-projekt>.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<din-anon-key>
-FOOTBALL_DATA_API_KEY=<din-football-data-nyckel>
-```
-
-> Server-side variabler som `FOOTBALL_DATA_API_KEY` läses i `createServerFn`-handlers, inte i klientkoden.
-
-### Kör utvecklingsservern
-
-```bash
-bun dev
-```
-
-Appen startar normalt på `http://localhost:8080`.
-
-### Bygg för produktion
-
-```bash
-bun run build
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+FOOTBALL_DATA_API_KEY=...          # read only in server functions
 ```
 
 ---
 
-## Projektstruktur
+## Further reading
 
-```text
-src/
-  components/        # Återanvändbara UI-komponenter (shadcn/ui + egna)
-  hooks/             # React-hooks
-  integrations/      # Supabase-klienter och auth-hjälpare (auto-genererade)
-  lib/               # API-klienter, server functions, utilities
-  routes/            # TanStack file-based routes
-  router.tsx         # Router-konfiguration
-  server.ts          # Server setup
-  start.ts           # Start-konfiguration med middleware
-  styles.css         # Global CSS + Tailwind-teman
-supabase/
-  migrations/        # Databasmigrationer
-public/              # Statiska tillgångar, manifest.webmanifest
-```
+- [`docs/case-study.md`](./docs/case-study.md) — problem, users, hardest business rules, trade-offs, what went wrong, what's next.
+- [`docs/architecture.md`](./docs/architecture.md) — data model, RLS, scoring triggers, realtime, sync pipeline, security.
+- [`docs/demo-script.md`](./docs/demo-script.md) — 90-second walkthrough script for a portfolio video.
+- [`docs/portfolio-checklist.md`](./docs/portfolio-checklist.md) — GitHub polish checklist.
 
 ---
 
-## Databas & säkerhet
+## License
 
-- Alla tabeller ligger i `public`-schemat med **Row Level Security (RLS)** aktiverat.
-- Roller hanteras via en separat `user_roles`-tabell (aldrig i `profiles`).
-- Admins verifieras server-side via `has_role()`-funktioner, inte client-side storage.
-- Poängberäkning sker via Postgres-triggers och RPC-funktioner.
-- Synkning mot football-data.org sker via en publik endpoint under `/api/public/sync` (anropas av `pg_cron` eller manuellt i adminpanelen).
-
----
-
-## Viktiga kommandon
-
-| Kommando | Beskrivning |
-|----------|-------------|
-| `bun dev` | Starta utvecklingsserver |
-| `bun run build` | Bygg produktionsversion |
-| `bun run build:dev` | Bygg i development-läge |
-| `bun run preview` | Förhandsgranska produktionsbygge |
-| `bun run lint` | Kör ESLint |
-| `bun run format` | Formatera med Prettier |
-
----
-
-## Publicering
-
-Projektet är kopplat till GitHub via Lovable's tvåvägs-synk. Ändringar pushas automatiskt till GitHub, och ändringar i GitHub synkas tillbaka.
-
-Live-URL: `https://vm2026showdown.lovable.app`
-
----
-
-## Licens
-
-Privat projekt. Ingen öppen källkodslicens.
+Private portfolio project. No open-source license granted.
