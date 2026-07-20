@@ -1,5 +1,7 @@
 # VM 2026 Showdown
 
+![VM 2026 Showdown](docs/screenshots/01-landing.png)
+
 > A private prediction league for the FIFA World Cup 2026 — full product, from onboarding to final summary.
 > **Live:** [vm2026showdown.lovable.app](https://vm2026showdown.lovable.app) · **Swedish README:** [README.sv.md](./README.sv.md)
 
